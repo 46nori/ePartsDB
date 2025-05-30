@@ -468,6 +468,17 @@ a:hover {
   }
 }
 
+/* 在庫数の表示スタイル */
+.stock-zero {
+  color: #dc3545 !important;
+  font-weight: bold;
+}
+
+.stock-low {
+  color: #ffc107 !important;
+  font-weight: bold;
+}
+
 /* ユーティリティクラス */
 .text-center {
   text-align: center;

@@ -151,8 +151,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // 全パーツ検索を実行
-  function performGlobalSearch() {
+  // 在庫数の表示スタイルを適用する関数
+  function formatStockQuantity(quantity) {
+    const qty = quantity !== null ? quantity : 0;
+    let className = '';
+    
+    if (qty === 0) {
+      className = 'stock-zero';
+    } else if (qty < 5) {  // 5未満を少ない在庫として黄色表示
+      className = 'stock-low';
+    }
+    // 5以上は通常表示（クラスなし）
+    
+    return className ? `<span class="${className}">${qty}</span>` : qty;
+  }
+  
+  // 全パーツ検索を実行（修正）
+  function performGlobalSearch(sortField = 'categories.id, parts.name', sortDirection = 'ASC') {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
       statusElement.className = 'status error';
@@ -233,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = stmt.getAsObject();
         rows.push(row);
         html += `<tr>
-          <td>${row.quantity !== null ? row.quantity : 0}</td>
+          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
           <td>${escapeHtml(row.name || '')}</td>
           <td>${escapeHtml(row.logic_family || '')}</td>
           <td>${escapeHtml(row.part_number || '')}</td>
@@ -445,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // ソート機能付きでパーツ一覧を表示
-  function showSortedParts(categoryId, categoryName, sortField, sortDirection) {
+  function showSortedParts(categoryId, categoryName, sortField = 'inventory.quantity', sortDirection = 'DESC') {
     try {
       const sql = `
         SELECT parts.name, parts.logic_family, parts.part_number, parts.description, inventory.quantity
@@ -483,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = stmt.getAsObject();
         rows.push(row);
         html += `<tr>
-          <td>${row.quantity !== null ? row.quantity : 0}</td>
+          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
           <td>${escapeHtml(row.name || '')}</td>
           <td>${escapeHtml(row.logic_family || '')}</td>
           <td>${escapeHtml(row.part_number || '')}</td>
@@ -555,7 +570,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // カテゴリ内のパーツを検索する
+  // カテゴリ内のパーツを検索する（修正）
   function searchPartsInCategory(categoryId, categoryName) {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
@@ -619,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <td>${escapeHtml(row.logic_family || '')}</td>
           <td>${escapeHtml(row.part_number || '')}</td>
           <td>${escapeHtml(row.description || '')}</td>
-          <td>${row.quantity !== null ? row.quantity : 0}</td>
+          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
         </tr>`;
       }
       
@@ -707,7 +722,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // カテゴリを検索する関数を完全修正
+  // カテゴリを検索
   function searchCategories() {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
