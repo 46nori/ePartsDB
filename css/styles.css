@@ -94,7 +94,7 @@ button:hover {
   color: #dc3545;
 }
 
-/* テーブル */
+/* テーブル - 基本設定（全て左寄せ） */
 table {
   border-collapse: collapse;
   width: 100%;
@@ -106,7 +106,7 @@ table {
 th {
   background-color: #f8f9fa;
   color: #495057;
-  text-align: left;
+  text-align: left;  /* 基本的に左寄せ */
   padding: 10px 8px;
   font-weight: 600;
   font-size: 0.9rem;
@@ -117,6 +117,7 @@ td {
   border-top: 1px solid #dee2e6;
   vertical-align: top;
   line-height: 1.4;
+  text-align: left;  /* 基本的に左寄せ */
 }
 
 tr:nth-child(even) {
@@ -133,6 +134,71 @@ th.sortable {
 
 th.sortable:hover {
   background-color: #e9ecef;
+}
+
+/* 在庫数列のみ右寄せ設定 */
+/* 全パーツ検索結果での在庫数列（最初の列）の右寄せ */
+#globalSearchResults table th:first-child,
+#globalSearchResults table td:first-child {
+  text-align: right;
+  width: 80px;
+}
+
+/* カテゴリ内検索結果での在庫数列（最後の列）の右寄せ */
+#parts-view table th:last-child,
+#parts-view table td:last-child {
+  text-align: right;
+  width: 80px;
+}
+
+/* カテゴリ内検索結果のテーブル列幅調整 */
+/* 在庫数（1列目）: 80px（右寄せ） */
+#parts-view table th:nth-child(1),
+#parts-view table td:nth-child(1) {
+  width: 80px;
+  text-align: right;
+}
+
+/* 部品名（2列目）: 150px（固定幅、改行対応、左寄せ） */
+#parts-view table th:nth-child(2),
+#parts-view table td:nth-child(2) {
+  width: 150px;
+  max-width: 150px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
+/* 種別（3列目）: 100px（固定幅、左寄せ） */
+#parts-view table th:nth-child(3),
+#parts-view table td:nth-child(3) {
+  width: 100px;
+  max-width: 100px;
+  text-align: left;
+}
+
+/* 型番（4列目）: 90px（固定幅、左寄せ） */
+#parts-view table th:nth-child(4),
+#parts-view table td:nth-child(4) {
+  width: 90px;
+  max-width: 90px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-align: left;
+}
+
+/* 説明（5列目）: 自動幅（最小200px、左寄せ） */
+#parts-view table th:nth-child(5),
+#parts-view table td:nth-child(5) {
+  width: auto;
+  min-width: 200px;
+  text-align: left !important;
+}
+
+/* 古いlast-child設定を削除または上書き */
+#parts-view table th:last-child,
+#parts-view table td:last-child {
+  text-align: left !important;  /* 説明列なので左寄せ */
 }
 
 /* タブ切り替え */
@@ -251,6 +317,62 @@ a:hover {
   .category-card h3 {
     font-size: 0.9rem;
   }
+  
+  /* 在庫数列の幅をタブレットで調整（右寄せ維持） */
+  #globalSearchResults table th:first-child,
+  #globalSearchResults table td:first-child,
+  #parts-view table th:last-child,
+  #parts-view table td:last-child {
+    width: 60px;
+    min-width: 50px;
+    text-align: right;
+  }
+  
+  /* カテゴリ内検索結果の列幅をタブレットで調整 */
+  /* 在庫数（1列目） */
+  #parts-view table th:nth-child(1),
+  #parts-view table td:nth-child(1) {
+    width: 60px;
+    min-width: 50px;
+    text-align: right;
+  }
+  
+  /* 部品名（2列目） */
+  #parts-view table th:nth-child(2),
+  #parts-view table td:nth-child(2) {
+    width: 120px;
+    max-width: 120px;
+    text-align: left;
+  }
+  
+  /* 種別（3列目） */
+  #parts-view table th:nth-child(3),
+  #parts-view table td:nth-child(3) {
+    width: 80px;
+    max-width: 80px;
+    text-align: left;
+  }
+  
+  /* 型番（4列目） */
+  #parts-view table th:nth-child(4),
+  #parts-view table td:nth-child(4) {
+    width: 80px;
+    max-width: 80px;
+    text-align: left;
+  }
+  
+  /* 説明（5列目） */
+  #parts-view table th:nth-child(5),
+  #parts-view table td:nth-child(5) {
+    min-width: 150px;
+    text-align: left !important;
+  }
+  
+  /* last-child（説明列）の設定を上書き */
+  #parts-view table th:last-child,
+  #parts-view table td:last-child {
+    text-align: left !important;
+  }
 }
 
 /* レスポンシブデザイン - スマートフォン */
@@ -287,6 +409,62 @@ a:hover {
     margin: 12px 0;
     padding: 8px;
     font-size: 0.8rem;
+  }
+  
+  /* 在庫数列の幅をさらに狭く（右寄せ維持） */
+  #globalSearchResults table th:first-child,
+  #globalSearchResults table td:first-child,
+  #parts-view table th:last-child,
+  #parts-view table td:last-child {
+    width: 50px;
+    min-width: 40px;
+    text-align: right;
+  }
+  
+  /* カテゴリ内検索結果の列幅をスマートフォンで調整 */
+  /* 在庫数（1列目） */
+  #parts-view table th:nth-child(1),
+  #parts-view table td:nth-child(1) {
+    width: 50px;
+    min-width: 40px;
+    text-align: right;
+  }
+  
+  /* 部品名（2列目） */
+  #parts-view table th:nth-child(2),
+  #parts-view table td:nth-child(2) {
+    width: 100px;
+    max-width: 100px;
+    text-align: left;
+  }
+  
+  /* 種別（3列目） */
+  #parts-view table th:nth-child(3),
+  #parts-view table td:nth-child(3) {
+    width: 60px;
+    max-width: 60px;
+    text-align: left;
+  }
+  
+  /* 型番（4列目） */
+  #parts-view table th:nth-child(4),
+  #parts-view table td:nth-child(4) {
+    width: 70px;
+    max-width: 70px;
+    text-align: left;
+  }
+  
+  /* 説明（5列目） */
+  #parts-view table th:nth-child(5),
+  #parts-view table td:nth-child(5) {
+    min-width: 120px;
+    text-align: left !important;
+  }
+  
+  /* last-child（説明列）の設定を上書き */
+  #parts-view table th:last-child,
+  #parts-view table td:last-child {
+    text-align: left !important;
   }
 }
 
