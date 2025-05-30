@@ -85,6 +85,19 @@ document.addEventListener('DOMContentLoaded', function() {
       .replace(/'/g, "&#039;");
   }
   
+  // 部品名の表示を生成する関数（データシートリンク対応）
+  function formatPartName(name, datasheetUrl) {
+    const partName = escapeHtml(name || '');
+    
+    if (datasheetUrl && datasheetUrl.trim() !== '') {
+      // データシートURLがある場合はハイパーリンクにする
+      return `<a href="${escapeHtml(datasheetUrl)}" target="_blank" rel="noopener noreferrer">${partName}</a>`;
+    } else {
+      // データシートURLがない場合は通常のテキスト
+      return partName;
+    }
+  }
+  
   // タブ切り替え用のイベントリスナーを設定
   function setupTabs() {
     const categoriesTab = document.getElementById('categories-tab');
@@ -186,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // 全パーツ検索を実行
+  // 全パーツ検索を実行（修正）
   function performGlobalSearch(sortField = 'categories.id, parts.name', sortDirection = 'ASC') {
     try {
       statusElement.textContent = '検索中...';
@@ -253,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.push(row);
         html += `<tr>
           <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
-          <td>${escapeHtml(row.name || '')}</td>
+          <td>${formatPartName(row.name, row.datasheet_url)}</td>
           <td>${escapeHtml(row.logic_family || '')}</td>
           <td>${escapeHtml(row.part_number || '')}</td>
           <td>${escapeHtml(row.package || '')}</td>
@@ -530,59 +543,59 @@ document.addEventListener('DOMContentLoaded', function() {
           </th>
           <th>説明</th>
         </tr>`;
-    
-      let hasResults = false;
-      const rows = [];
-    
-      while (stmt.step()) {
-        hasResults = true;
-        const row = stmt.getAsObject();
-        rows.push(row);
-        html += `<tr>
-          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
-          <td>${escapeHtml(row.name || '')}</td>
-          <td>${escapeHtml(row.logic_family || '')}</td>
-          <td>${escapeHtml(row.part_number || '')}</td>
-          <td>${escapeHtml(row.package || '')}</td>
-          <td>${escapeHtml(row.description || '')}</td>
-        </tr>`;
-      }
-    
-      html += '</table>';
-      stmt.free();
-    
-      if (hasResults) {
-        partsView.innerHTML = html;
-        statusElement.textContent = `「${categoryName}」に${rows.length}個のパーツがあります`;
-        statusElement.className = 'status';
-        
-        // ソート機能のイベントリスナーを追加
-        addSortEventListeners(categoryId, categoryName);
-      } else {
-        partsView.innerHTML = '<p>このカテゴリにはパーツがありません。</p>';
-        statusElement.textContent = `「${categoryName}」にはパーツがありません`;
-        statusElement.className = 'status';
-      }
-      
-      // ビューの切り替え
-      currentView = 'parts';
-      updateViewControls();
-      
-      // タブがカテゴリでない場合は切り替える
-      if (currentTab !== 'categories') {
-        switchTab('categories');
-      } else {
-        categoriesView.style.display = 'none';
-        partsView.style.display = 'block';
-        searchView.style.display = 'none';
-      }
-      
-    } catch (error) {
-      console.error('パーツ一覧表示エラー:', error);
-      statusElement.textContent = 'エラーが発生しました: ' + error.message;
-      statusElement.className = 'status error';
+
+    let hasResults = false;
+    const rows = [];
+
+    while (stmt.step()) {
+      hasResults = true;
+      const row = stmt.getAsObject();
+      rows.push(row);
+      html += `<tr>
+        <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
+        <td>${formatPartName(row.name, row.datasheet_url)}</td>
+        <td>${escapeHtml(row.logic_family || '')}</td>
+        <td>${escapeHtml(row.part_number || '')}</td>
+        <td>${escapeHtml(row.package || '')}</td>
+        <td>${escapeHtml(row.description || '')}</td>
+      </tr>`;
     }
+
+    html += '</table>';
+    stmt.free();
+
+    if (hasResults) {
+      partsView.innerHTML = html;
+      statusElement.textContent = `「${categoryName}」に${rows.length}個のパーツがあります`;
+      statusElement.className = 'status';
+      
+      // ソート機能のイベントリスナーを追加
+      addSortEventListeners(categoryId, categoryName);
+    } else {
+      partsView.innerHTML = '<p>このカテゴリにはパーツがありません。</p>';
+      statusElement.textContent = `「${categoryName}」にはパーツがありません`;
+      statusElement.className = 'status';
+    }
+    
+    // ビューの切り替え
+    currentView = 'parts';
+    updateViewControls();
+    
+    // タブがカテゴリでない場合は切り替える
+    if (currentTab !== 'categories') {
+      switchTab('categories');
+    } else {
+      categoriesView.style.display = 'none';
+      partsView.style.display = 'block';
+      searchView.style.display = 'none';
+    }
+    
+  } catch (error) {
+    console.error('パーツ一覧表示エラー:', error);
+    statusElement.textContent = 'エラーが発生しました: ' + error.message;
+    statusElement.className = 'status error';
   }
+}
   
   // カテゴリ内にパーツ検索用の検索バーを追加する関数
   function addCategorySearchBar(categoryId, categoryName) {
@@ -660,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = stmt.getAsObject();
         rows.push(row);
         html += `<tr>
-          <td>${escapeHtml(row.name || '')}</td>
+          <td>${formatPartName(row.name, row.datasheet_url)}</td>
           <td>${escapeHtml(row.logic_family || '')}</td>
           <td>${escapeHtml(row.part_number || '')}</td>
           <td>${escapeHtml(row.package || '')}</td>
