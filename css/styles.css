@@ -187,15 +187,23 @@ th.sortable:hover {
   text-align: left;
 }
 
-/* 説明（5列目）: 自動幅（最小200px、左寄せ） */
+/* 外形（5列目）: 80px（固定幅、左寄せ） */
 #parts-view table th:nth-child(5),
 #parts-view table td:nth-child(5) {
+  width: 80px;
+  max-width: 80px;
+  text-align: left;
+}
+
+/* 説明（6列目）: 自動幅（最小200px、左寄せ） */
+#parts-view table th:nth-child(6),
+#parts-view table td:nth-child(6) {
   width: auto;
   min-width: 200px;
   text-align: left !important;
 }
 
-/* 古いlast-child設定を削除または上書き */
+/* 在庫数列（最後の列）のみ右寄せを維持 */
 #parts-view table th:last-child,
 #parts-view table td:last-child {
   text-align: left !important;  /* 説明列なので左寄せ */
@@ -361,9 +369,17 @@ a:hover {
     text-align: left;
   }
   
-  /* 説明（5列目） */
+  /* 外形（5列目） */
   #parts-view table th:nth-child(5),
   #parts-view table td:nth-child(5) {
+    width: 60px;
+    max-width: 60px;
+    text-align: left;
+  }
+  
+  /* 説明（6列目） */
+  #parts-view table th:nth-child(6),
+  #parts-view table td:nth-child(6) {
     min-width: 150px;
     text-align: left !important;
   }
@@ -454,9 +470,17 @@ a:hover {
     text-align: left;
   }
   
-  /* 説明（5列目） */
+  /* 外形（5列目） */
   #parts-view table th:nth-child(5),
   #parts-view table td:nth-child(5) {
+    width: 50px;
+    max-width: 50px;
+    text-align: left;
+  }
+  
+  /* 説明（6列目） */
+  #parts-view table th:nth-child(6),
+  #parts-view table td:nth-child(6) {
     min-width: 120px;
     text-align: left !important;
   }

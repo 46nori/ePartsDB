@@ -11,6 +11,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const tabsContainer = document.getElementById('tabs-container');
   const pageTitle = document.getElementById('page-title');
   
+  // データベースファイルのURL
+  const DB_URL = './eparts.db';
+
+  // 現在のビュー状態を管理
+  let currentView = 'categories'; // 'categories' または 'parts'
+  let currentTab = 'categories';  // 'categories' または 'search'
+  let currentCategoryId = null;
+  let currentCategoryName = '';
+  
   // タイトルクリックでトップに戻る
   if (pageTitle) {
     pageTitle.addEventListener('click', function() {
@@ -49,14 +58,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // データベースファイルのURL
-  const DB_URL = './eparts.db';
-
-  // 現在のビュー状態を管理
-  let currentView = 'categories'; // 'categories' または 'parts'
-  let currentTab = 'categories';  // 'categories' または 'search'
-  let currentCategoryId = null;
-  let currentCategoryName = '';
+  // 在庫数の表示スタイルを適用する関数
+  function formatStockQuantity(quantity) {
+    const qty = quantity !== null ? quantity : 0;
+    let className = '';
+    
+    if (qty === 0) {
+      className = 'stock-zero';
+    } else if (qty < 5) {  // 5未満を少ない在庫として黄色表示
+      className = 'stock-low';
+    }
+    // 5以上は通常表示（クラスなし）
+    
+    return className ? `<span class="${className}">${qty}</span>` : qty;
+  }
+  
+  // HTML特殊文字をエスケープする関数（XSS対策）
+  function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return unsafe
+      .toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
   
   // タブ切り替え用のイベントリスナーを設定
   function setupTabs() {
@@ -113,6 +140,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
+  // 全パーツ検索のイベントリスナーを設定する関数
+  function setupGlobalSearchEvents() {
+    const globalSearchButton = document.getElementById('globalSearchButton');
+    if (globalSearchButton) {
+      globalSearchButton.addEventListener('click', performGlobalSearch);
+    }
+    
+    const globalSearchInput = document.getElementById('globalSearchInput');
+    if (globalSearchInput) {
+      globalSearchInput.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          performGlobalSearch();
+        }
+      });
+    }
+  }
+  
   // 全パーツ検索ビューを表示
   function showSearchView(resetForm = false) {
     // 既存の検索コンテナがある場合
@@ -131,118 +175,78 @@ document.addEventListener('DOMContentLoaded', function() {
       // 検索ビューの内容を完全にリセット
       searchView.innerHTML = searchForm;
       
-      // 検索ボタンのイベントリスナーを設定
-      const globalSearchButton = document.getElementById('globalSearchButton');
-      if (globalSearchButton) {
-        globalSearchButton.addEventListener('click', performGlobalSearch);
-      }
+      // イベントリスナーを設定
+      setupGlobalSearchEvents();
       
+      // フォーカスを検索ボックスに設定
       const globalSearchInput = document.getElementById('globalSearchInput');
       if (globalSearchInput) {
-        globalSearchInput.addEventListener('keypress', function(event) {
-          if (event.key === 'Enter') {
-            performGlobalSearch();
-          }
-        });
-        
-        // フォーカスを検索ボックスに設定
         globalSearchInput.focus();
       }
     }
   }
   
-  // 在庫数の表示スタイルを適用する関数
-  function formatStockQuantity(quantity) {
-    const qty = quantity !== null ? quantity : 0;
-    let className = '';
-    
-    if (qty === 0) {
-      className = 'stock-zero';
-    } else if (qty < 5) {  // 5未満を少ない在庫として黄色表示
-      className = 'stock-low';
-    }
-    // 5以上は通常表示（クラスなし）
-    
-    return className ? `<span class="${className}">${qty}</span>` : qty;
-  }
-  
-  // 全パーツ検索を実行（修正）
+  // 全パーツ検索を実行
   function performGlobalSearch(sortField = 'categories.id, parts.name', sortDirection = 'ASC') {
-    if (!db) {
-      statusElement.textContent = 'データベースがまだ読み込まれていません。';
-      statusElement.className = 'status error';
-      return;
-    }
-    
-    const globalSearchInput = document.getElementById('globalSearchInput');
-    if (!globalSearchInput) return;
-    
-    const keyword = globalSearchInput.value.trim();
-    
     try {
-      let sql;
-      let params = {};
+      statusElement.textContent = '検索中...';
+      statusElement.className = 'status loading';
       
-      if (keyword === '') {
-        // 空のクエリの場合は全パーツを表示（カテゴリID順）
+      // 検索ワードを取得
+      const globalSearchInput = document.getElementById('globalSearchInput');
+      const searchTerm = globalSearchInput ? globalSearchInput.value.trim() : '';
+      
+      let sql;
+      let params = [];
+      
+      if (searchTerm === '') {
+        // 検索ワードが空の場合は全パーツを表示
         sql = `
-          SELECT 
-            parts.id,
-            parts.name, 
-            parts.logic_family, 
-            parts.part_number, 
-            parts.description,
-            inventory.quantity,
-            categories.name AS category_name,
-            categories.id AS category_id
+          SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
           FROM parts
-          LEFT JOIN inventory ON parts.id = inventory.part_id
           LEFT JOIN categories ON parts.category_id = categories.id
-          ORDER BY categories.id, parts.name
+          LEFT JOIN inventory ON parts.id = inventory.part_id
+          ORDER BY ${sortField} ${sortDirection}
         `;
       } else {
-        // 検索キーワードがある場合
+        // 検索ワードがある場合はフィルタリング
         sql = `
-          SELECT 
-            parts.id,
-            parts.name, 
-            parts.logic_family, 
-            parts.part_number, 
-            parts.description,
-            inventory.quantity,
-            categories.name AS category_name,
-            categories.id AS category_id
+          SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
           FROM parts
-          LEFT JOIN inventory ON parts.id = inventory.part_id
           LEFT JOIN categories ON parts.category_id = categories.id
-          WHERE 
-            parts.name LIKE $kw 
-            OR parts.part_number LIKE $kw 
-            OR parts.description LIKE $kw
-            OR parts.logic_family LIKE $kw
-          ORDER BY parts.name
+          LEFT JOIN inventory ON parts.id = inventory.part_id
+          WHERE (
+            parts.name LIKE '%' || ? || '%' OR
+            parts.part_number LIKE '%' || ? || '%' OR
+            parts.description LIKE '%' || ? || '%' OR
+            parts.logic_family LIKE '%' || ? || '%' OR
+            parts.package LIKE '%' || ? || '%' OR
+            categories.name LIKE '%' || ? || '%'
+          )
+          ORDER BY ${sortField} ${sortDirection}
         `;
-        params = { $kw: `%${keyword}%` };
+        params = [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
       }
       
       const stmt = db.prepare(sql);
-      if (keyword !== '') {
+      if (params.length > 0) {
         stmt.bind(params);
       }
       
-      let rows = [];
       let html = `<table>
         <tr>
-          <th>在庫数</th>
+          <th style="text-align: right; width: 80px;">在庫数</th>
           <th>部品名</th>
           <th>種別</th>
           <th>型番</th>
+          <th>外形</th>
           <th>説明</th>
           <th>カテゴリ</th>
         </tr>`;
-      
+
       let hasResults = false;
-      
+      const rows = [];
+
       while (stmt.step()) {
         hasResults = true;
         const row = stmt.getAsObject();
@@ -252,6 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <td>${escapeHtml(row.name || '')}</td>
           <td>${escapeHtml(row.logic_family || '')}</td>
           <td>${escapeHtml(row.part_number || '')}</td>
+          <td>${escapeHtml(row.package || '')}</td>
           <td>${escapeHtml(row.description || '')}</td>
           <td>
             <a href="#" onclick="selectCategory(${row.category_id}, '${escapeHtml(row.category_name || '')}'); return false;">
@@ -260,97 +265,125 @@ document.addEventListener('DOMContentLoaded', function() {
           </td>
         </tr>`;
       }
-      
+
       html += '</table>';
-      
-      const globalSearchResults = document.getElementById('globalSearchResults');
-      
+      stmt.free();
+
       if (hasResults) {
-        globalSearchResults.innerHTML = html;
-        statusElement.textContent = keyword ? 
-          `検索結果: 「${escapeHtml(keyword)}」に一致する部品が${rows.length}件見つかりました。` :
-          `全パーツ一覧（${rows.length}件）`;
+        // 検索フォームを保持したまま結果を表示
+        const globalSearchResults = document.getElementById('globalSearchResults');
+        if (globalSearchResults) {
+          globalSearchResults.innerHTML = html;
+        } else {
+          // 検索フォームと結果を含むHTMLを作成
+          const searchForm = `
+            <div class="search-container">
+              <input type="text" id="globalSearchInput" placeholder="部品名、型番、種別、説明などで検索" value="${escapeHtml(searchTerm)}">
+              <button id="globalSearchButton">検索</button>
+            </div>
+            <div id="globalSearchResults">${html}</div>
+          `;
+          searchView.innerHTML = searchForm;
+          
+          // イベントリスナーを再設定
+          setupGlobalSearchEvents();
+        }
+        
+        // ステータスメッセージの更新
+        if (searchTerm === '') {
+          statusElement.textContent = `${rows.length}件のパーツが登録されています`;
+        } else {
+          statusElement.textContent = `「${searchTerm}」の検索結果: ${rows.length}件のパーツが見つかりました`;
+        }
         statusElement.className = 'status';
       } else {
-        globalSearchResults.innerHTML = '<p>該当する部品が見つかりませんでした。</p>';
-        statusElement.textContent = keyword ? 
-          `「${escapeHtml(keyword)}」に一致する部品は見つかりませんでした。` :
-          `データベースにパーツが登録されていません。`;
+        // 検索フォームを保持
+        const globalSearchResults = document.getElementById('globalSearchResults');
+        if (globalSearchResults) {
+          globalSearchResults.innerHTML = '<p>該当するパーツが見つかりませんでした。</p>';
+        }
+        
+        if (searchTerm === '') {
+          statusElement.textContent = 'パーツが登録されていません';
+        } else {
+          statusElement.textContent = `「${searchTerm}」に一致するパーツは見つかりませんでした`;
+        }
         statusElement.className = 'status';
       }
     } catch (error) {
-      console.error('グローバル検索エラー:', error);
-      statusElement.textContent = `検索中にエラーが発生しました: ${error.message}`;
+      console.error('全パーツ検索エラー:', error);
+      statusElement.textContent = 'エラーが発生しました: ' + error.message;
       statusElement.className = 'status error';
-      document.getElementById('globalSearchResults').innerHTML = '';
     }
   }
   
-  // Safari対応のWASMロード処理の変更
+  // Safari対応のWASMロード処理
   function initDb() {
-    // Safari用にwasmBinaryのキャッシュバスティング
-    const wasmUrl = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.wasm';
+    console.log('データベース初期化開始');
+    statusElement.textContent = 'SQL.jsライブラリを読み込み中...';
     
+    // SQL.jsライブラリのロード
     initSqlJs({ 
       locateFile: file => {
-        if (file.endsWith('.wasm')) {
-          return `${wasmUrl}?t=${new Date().getTime()}`; // キャッシュ回避
-        }
         return `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`;
       }
     })
     .then(SQL => {
+      console.log('SQL.js読み込み完了');
       statusElement.textContent = 'データベースファイルをダウンロード中...';
       
-      // XMLHttpRequestを使用してSafariでも確実に動作させる
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', DB_URL, true);
-      xhr.responseType = 'arraybuffer';
-      
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          try {
-            const buffer = xhr.response;
-            db = new SQL.Database(new Uint8Array(buffer));
-            statusElement.textContent = 'データベースの読み込みが完了しました。';
-            statusElement.className = 'status';
-            
-            // タブコンテナを表示
-            tabsContainer.style.display = 'block';
-            // タブ切り替え機能を設定
-            setupTabs();
-            
-            // 初期表示としてカテゴリ一覧を表示
-            showCategories();
-          } catch (e) {
-            console.error('データベース作成エラー:', e);
-            statusElement.textContent = `データベース作成エラー: ${e.message}`;
-            statusElement.className = 'status error';
+      // データベースファイルのロード
+      return fetch(DB_URL);
+    })
+    .then(response => {
+      console.log('データベースファイル取得:', response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} - データベースファイルが見つかりませんでした`);
+      }
+      return response.arrayBuffer();
+    })
+    .then(buffer => {
+      console.log('データベースファイル読み込み完了');
+      // データベースの作成
+      const SQL = window.initSqlJs.__SQL__;
+      if (!SQL) {
+        // SQL.jsが正しく読み込まれていない場合の再取得
+        return initSqlJs({ 
+          locateFile: file => {
+            return `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`;
           }
-        } else {
-          console.error('データベースファイルが読み込めませんでした');
-          statusElement.textContent = `エラー: HTTP ${xhr.status} - データベースファイルが見つかりませんでした。`;
-          statusElement.className = 'status error';
-        }
-      };
+        }).then(SQL => {
+          db = new SQL.Database(new Uint8Array(buffer));
+          return db;
+        });
+      } else {
+        db = new SQL.Database(new Uint8Array(buffer));
+        return db;
+      }
+    })
+    .then(() => {
+      console.log('データベース作成完了');
+      statusElement.textContent = 'データベースの読み込みが完了しました。';
+      statusElement.className = 'status';
       
-      xhr.onerror = function() {
-        console.error('ネットワークエラー');
-        statusElement.textContent = 'ネットワークエラー: データベースファイルをダウンロードできませんでした。';
-        statusElement.className = 'status error';
-      };
+      // タブコンテナを表示
+      tabsContainer.style.display = 'block';
+      // タブ切り替え機能を設定
+      setupTabs();
       
-      xhr.send();
+      // 初期表示としてカテゴリ一覧を表示
+      showCategories();
     })
     .catch(error => {
-      console.error('SQL.js初期化エラー:', error);
-      statusElement.textContent = `SQL.jsの読み込みに失敗しました: ${error.message}`;
+      console.error('データベース初期化エラー:', error);
+      statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
     });
   }
   
-  // カテゴリ一覧表示関数の修正
+  // カテゴリ一覧表示関数
   function showCategories() {
+    console.log('カテゴリ一覧表示開始');
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
       statusElement.className = 'status error';
@@ -389,6 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       html += '</div>';
+      stmt.free();
       
       if (hasCategories) {
         categoriesView.innerHTML = html;
@@ -427,6 +461,8 @@ document.addEventListener('DOMContentLoaded', function() {
         partsView.style.display = 'none';
         searchView.style.display = 'none';
       }
+      
+      console.log('カテゴリ一覧表示完了');
     } catch (error) {
       console.error('カテゴリ読み込みエラー:', error);
       statusElement.textContent = `カテゴリ情報の取得中にエラーが発生しました: ${error.message}`;
@@ -444,6 +480,214 @@ document.addEventListener('DOMContentLoaded', function() {
     showPartsByCategory(categoryId, categoryName);
   };
   
+  // ソート機能のイベントリスナーを追加する関数
+  function addSortEventListeners(categoryId, categoryName) {
+    const sortableHeaders = document.querySelectorAll('th.sortable');
+    
+    sortableHeaders.forEach(header => {
+      header.addEventListener('click', function() {
+        const sortField = this.getAttribute('data-field');
+        const sortDirection = this.getAttribute('data-direction');
+        
+        // ソートを実行
+        showSortedParts(categoryId, categoryName, sortField, sortDirection);
+      });
+    });
+  }
+  
+  // ソート機能付きでパーツ一覧を表示
+  function showSortedParts(categoryId, categoryName, sortField = 'inventory.quantity', sortDirection = 'DESC') {
+    try {
+      statusElement.textContent = 'パーツ一覧を読み込み中...';
+      statusElement.className = 'status loading';
+      
+      const stmt = db.prepare(`
+        SELECT parts.*, inventory.quantity
+        FROM parts
+        LEFT JOIN inventory ON parts.id = inventory.part_id
+        WHERE parts.category_id = ?
+        ORDER BY ${sortField} ${sortDirection}
+      `);
+      
+      stmt.bind([categoryId]);
+      
+      let html = `<table>
+        <tr>
+          <th class="sortable" data-field="inventory.quantity" data-direction="${sortField === 'inventory.quantity' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}" style="text-align: right; width: 80px;">
+            在庫数 ${sortField === 'inventory.quantity' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
+          </th>
+          <th class="sortable" data-field="parts.name" data-direction="${sortField === 'parts.name' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
+            部品名 ${sortField === 'parts.name' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
+          </th>
+          <th class="sortable" data-field="parts.logic_family" data-direction="${sortField === 'parts.logic_family' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
+            種別 ${sortField === 'parts.logic_family' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
+          </th>
+          <th class="sortable" data-field="parts.part_number" data-direction="${sortField === 'parts.part_number' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
+            型番 ${sortField === 'parts.part_number' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
+          </th>
+          <th class="sortable" data-field="parts.package" data-direction="${sortField === 'parts.package' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
+            外形 ${sortField === 'parts.package' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
+          </th>
+          <th>説明</th>
+        </tr>`;
+    
+      let hasResults = false;
+      const rows = [];
+    
+      while (stmt.step()) {
+        hasResults = true;
+        const row = stmt.getAsObject();
+        rows.push(row);
+        html += `<tr>
+          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
+          <td>${escapeHtml(row.name || '')}</td>
+          <td>${escapeHtml(row.logic_family || '')}</td>
+          <td>${escapeHtml(row.part_number || '')}</td>
+          <td>${escapeHtml(row.package || '')}</td>
+          <td>${escapeHtml(row.description || '')}</td>
+        </tr>`;
+      }
+    
+      html += '</table>';
+      stmt.free();
+    
+      if (hasResults) {
+        partsView.innerHTML = html;
+        statusElement.textContent = `「${categoryName}」に${rows.length}個のパーツがあります`;
+        statusElement.className = 'status';
+        
+        // ソート機能のイベントリスナーを追加
+        addSortEventListeners(categoryId, categoryName);
+      } else {
+        partsView.innerHTML = '<p>このカテゴリにはパーツがありません。</p>';
+        statusElement.textContent = `「${categoryName}」にはパーツがありません`;
+        statusElement.className = 'status';
+      }
+      
+      // ビューの切り替え
+      currentView = 'parts';
+      updateViewControls();
+      
+      // タブがカテゴリでない場合は切り替える
+      if (currentTab !== 'categories') {
+        switchTab('categories');
+      } else {
+        categoriesView.style.display = 'none';
+        partsView.style.display = 'block';
+        searchView.style.display = 'none';
+      }
+      
+    } catch (error) {
+      console.error('パーツ一覧表示エラー:', error);
+      statusElement.textContent = 'エラーが発生しました: ' + error.message;
+      statusElement.className = 'status error';
+    }
+  }
+  
+  // カテゴリ内にパーツ検索用の検索バーを追加する関数
+  function addCategorySearchBar(categoryId, categoryName) {
+    const searchBarHtml = `
+      <div class="search-container">
+        <input type="text" id="categorySearch" placeholder="このカテゴリ内でパーツを検索">
+        <button id="categorySearchButton">検索</button>
+      </div>
+    `;
+    
+    // パーツビューの最初に検索バーを追加
+    partsView.insertAdjacentHTML('afterbegin', searchBarHtml);
+    
+    // 検索ボタンのイベントリスナーを設定
+    const categorySearchButton = document.getElementById('categorySearchButton');
+    if (categorySearchButton) {
+      categorySearchButton.addEventListener('click', function() {
+        searchPartsInCategory(categoryId, categoryName);
+      });
+    }
+    
+    const categorySearch = document.getElementById('categorySearch');
+    if (categorySearch) {
+      categorySearch.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          searchPartsInCategory(categoryId, categoryName);
+        }
+      });
+    }
+  }
+  
+  // カテゴリ内のパーツを検索する
+  function searchPartsInCategory(categoryId, categoryName) {
+    const searchTerm = document.getElementById('categorySearch').value.trim();
+    
+    if (!searchTerm) {
+      showSortedParts(categoryId, categoryName);
+      return;
+    }
+    
+    try {
+      statusElement.textContent = '検索中...';
+      statusElement.className = 'status loading';
+      
+      const stmt = db.prepare(`
+        SELECT parts.*, inventory.quantity
+        FROM parts
+        LEFT JOIN inventory ON parts.id = inventory.part_id
+        WHERE parts.category_id = ? AND (
+          parts.name LIKE '%' || ? || '%' OR
+          parts.part_number LIKE '%' || ? || '%' OR
+          parts.description LIKE '%' || ? || '%' OR
+          parts.package LIKE '%' || ? || '%'
+        )
+        ORDER BY parts.name
+      `);
+      
+      stmt.bind([categoryId, searchTerm, searchTerm, searchTerm, searchTerm]);
+      
+      let html = `<table>
+        <tr>
+          <th>部品名</th>
+          <th>種別</th>
+          <th>型番</th>
+          <th>外形</th>
+          <th>説明</th>
+          <th style="text-align: right; width: 80px;">在庫数</th>
+        </tr>`;
+      
+      let hasResults = false;
+      const rows = [];
+      
+      while (stmt.step()) {
+        hasResults = true;
+        const row = stmt.getAsObject();
+        rows.push(row);
+        html += `<tr>
+          <td>${escapeHtml(row.name || '')}</td>
+          <td>${escapeHtml(row.logic_family || '')}</td>
+          <td>${escapeHtml(row.part_number || '')}</td>
+          <td>${escapeHtml(row.package || '')}</td>
+          <td>${escapeHtml(row.description || '')}</td>
+          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
+        </tr>`;
+      }
+      
+      html += '</table>';
+      stmt.free();
+      
+      if (hasResults) {
+        partsView.innerHTML = html;
+        statusElement.textContent = `「${categoryName}」で「${searchTerm}」を含むパーツが${rows.length}件見つかりました`;
+        statusElement.className = 'status';
+      } else {
+        partsView.innerHTML = '<p>該当するパーツが見つかりませんでした。</p>';
+        statusElement.textContent = `「${categoryName}」で「${searchTerm}」を含むパーツは見つかりませんでした`;
+        statusElement.className = 'status';
+      }
+    } catch (error) {
+      console.error('カテゴリ内検索エラー:', error);
+      statusElement.textContent = 'エラーが発生しました: ' + error.message;
+      statusElement.className = 'status error';
+    }
+  }
+  
   // カテゴリ別のパーツ一覧を表示する関数
   function showPartsByCategory(categoryId, categoryName) {
     if (!db) {
@@ -457,251 +701,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let sortDirection = 'ASC';
     
     showSortedParts(categoryId, categoryName, sortField, sortDirection);
-  }
-  
-  // ソート機能付きでパーツ一覧を表示
-  function showSortedParts(categoryId, categoryName, sortField = 'inventory.quantity', sortDirection = 'DESC') {
-    try {
-      const sql = `
-        SELECT parts.name, parts.logic_family, parts.part_number, parts.description, inventory.quantity
-        FROM parts
-        LEFT JOIN inventory ON parts.id = inventory.part_id
-        WHERE parts.category_id = $categoryId
-        ORDER BY ${sortField} ${sortDirection}
-      `;
-      
-      const stmt = db.prepare(sql);
-      stmt.bind({ $categoryId: categoryId });
-      
-      let rows = [];
-      let html = `<table>
-        <tr>
-          <th class="sortable" data-field="inventory.quantity" data-direction="${sortField === 'inventory.quantity' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
-            在庫数 ${sortField === 'inventory.quantity' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
-          </th>
-          <th class="sortable" data-field="parts.name" data-direction="${sortField === 'parts.name' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
-            部品名 ${sortField === 'parts.name' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
-          </th>
-          <th class="sortable" data-field="parts.logic_family" data-direction="${sortField === 'parts.logic_family' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
-            種別 ${sortField === 'parts.logic_family' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
-          </th>
-          <th class="sortable" data-field="parts.part_number" data-direction="${sortField === 'parts.part_number' ? (sortDirection === 'ASC' ? 'DESC' : 'ASC') : 'ASC'}">
-            型番 ${sortField === 'parts.part_number' ? (sortDirection === 'ASC' ? '▲' : '▼') : ''}
-          </th>
-          <th>説明</th>
-        </tr>`;
-      
-      let hasResults = false;
-      
-      while (stmt.step()) {
-        hasResults = true;
-        const row = stmt.getAsObject();
-        rows.push(row);
-        html += `<tr>
-          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
-          <td>${escapeHtml(row.name || '')}</td>
-          <td>${escapeHtml(row.logic_family || '')}</td>
-          <td>${escapeHtml(row.part_number || '')}</td>
-          <td>${escapeHtml(row.description || '')}</td>
-        </tr>`;
-      }
-      
-      html += '</table>';
-      
-      // 検索フォームを追加
-      const searchForm = `
-        <div class="search-container">
-          <input type="text" id="queryInput" placeholder="このカテゴリ内を検索（空欄で全件表示）">
-          <button id="searchButton">検索</button>
-        </div>
-      `;
-      
-      if (hasResults) {
-        partsView.innerHTML = searchForm + html;
-        statusElement.textContent = `カテゴリ「${escapeHtml(categoryName)}」の部品一覧（${rows.length}件）`;
-        statusElement.className = 'status';
-      } else {
-        partsView.innerHTML = searchForm + '<p>このカテゴリには部品が登録されていません。</p>';
-        statusElement.textContent = `カテゴリ「${escapeHtml(categoryName)}」には部品が登録されていません。`;
-        statusElement.className = 'status';
-      }
-      
-      // ソート機能のイベントリスナーを追加
-      const sortableHeaders = document.querySelectorAll('.sortable');
-      sortableHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-          const field = this.dataset.field;
-          const direction = this.dataset.direction;
-          showSortedParts(categoryId, categoryName, field, direction);
-        });
-        // クリック可能なことを視覚的に示す
-        header.style.cursor = 'pointer';
-      });
-      
-      // 検索ボタンにイベントリスナーを追加
-      const searchButton = document.getElementById('searchButton');
-      if (searchButton) {
-        searchButton.addEventListener('click', function() {
-          searchPartsInCategory(categoryId, categoryName);
-        });
-      }
-      
-      const queryInput = document.getElementById('queryInput');
-      if (queryInput) {
-        queryInput.addEventListener('keypress', function(event) {
-          if (event.key === 'Enter') {
-            searchPartsInCategory(categoryId, categoryName);
-          }
-        });
-      }
-      
-      // ビューを切り替え
-      currentView = 'parts';
-      updateViewControls();
-      categoriesView.style.display = 'none';
-      partsView.style.display = 'block';
-      searchView.style.display = 'none';
-      
-    } catch (error) {
-      console.error('パーツ読み込みエラー:', error);
-      statusElement.textContent = `パーツ情報の取得中にエラーが発生しました: ${error.message}`;
-      statusElement.className = 'status error';
-      partsView.innerHTML = '';
-    }
-  }
-  
-  // カテゴリ内のパーツを検索する（修正）
-  function searchPartsInCategory(categoryId, categoryName) {
-    if (!db) {
-      statusElement.textContent = 'データベースがまだ読み込まれていません。';
-      statusElement.className = 'status error';
-      return;
-    }
     
-    const queryInput = document.getElementById('queryInput');
-    if (!queryInput) return;
-    
-    try {
-      const keyword = queryInput.value.trim();
-      let sql, params;
-      
-      if (keyword === '') {
-        // 空のクエリの場合はカテゴリ内の全件表示
-        sql = `
-          SELECT parts.name, parts.logic_family, parts.part_number, parts.description, inventory.quantity
-          FROM parts
-          LEFT JOIN inventory ON parts.id = inventory.part_id
-          WHERE parts.category_id = $categoryId
-          ORDER BY parts.name
-        `;
-        params = { $categoryId: categoryId };
-      } else {
-        // 検索キーワードがある場合
-        sql = `
-          SELECT parts.name, parts.logic_family, parts.part_number, parts.description, inventory.quantity
-          FROM parts
-          LEFT JOIN inventory ON parts.id = inventory.part_id
-          WHERE parts.category_id = $categoryId 
-          AND (parts.name LIKE $kw OR parts.part_number LIKE $kw OR parts.description LIKE $kw OR parts.logic_family LIKE $kw)
-          ORDER BY parts.name
-        `;
-        params = { 
-          $categoryId: categoryId,
-          $kw: `%${keyword}%` 
-        };
+    // パーツ表示後に検索バーを追加
+    setTimeout(() => {
+      if (!document.getElementById('categorySearch')) {
+        addCategorySearchBar(categoryId, categoryName);
       }
-      
-      const stmt = db.prepare(sql);
-      stmt.bind(params);
-      
-      let html = `<table>
-        <tr>
-          <th>部品名</th>
-          <th>種別</th>
-          <th>型番</th>
-          <th>説明</th>
-          <th>在庫数</th>
-        </tr>`;
-      
-      let hasResults = false;
-      
-      while (stmt.step()) {
-        hasResults = true;
-        const row = stmt.getAsObject();
-        rows.push(row);
-        html += `<tr>
-          <td>${escapeHtml(row.name || '')}</td>
-          <td>${escapeHtml(row.logic_family || '')}</td>
-          <td>${escapeHtml(row.part_number || '')}</td>
-          <td>${escapeHtml(row.description || '')}</td>
-          <td style="text-align: right;">${formatStockQuantity(row.quantity)}</td>
-        </tr>`;
-      }
-      
-      html += '</table>';
-      
-      // 検索フォームは再表示しない
-      const searchForm = partsView.querySelector('.search-container');
-      
-      if (hasResults) {
-        partsView.innerHTML = '';
-        if (searchForm) partsView.appendChild(searchForm);
-        partsView.innerHTML += html;
-        
-        // 検索ボタンのイベントリスナーを再設定
-        const searchButton = document.getElementById('searchButton');
-        if (searchButton) {
-          searchButton.addEventListener('click', function() {
-            searchPartsInCategory(categoryId, categoryName);
-          });
-        }
-        
-        const newQueryInput = document.getElementById('queryInput');
-        if (newQueryInput) {
-          newQueryInput.value = keyword;
-          newQueryInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-              searchPartsInCategory(categoryId, categoryName);
-            }
-          });
-        }
-        
-        statusElement.textContent = keyword ? 
-          `カテゴリ「${escapeHtml(categoryName)}」で「${escapeHtml(keyword)}」の検索結果（${rows.length}件）` :
-          `カテゴリ「${escapeHtml(categoryName)}」の部品一覧（${rows.length}件）`;
-        statusElement.className = 'status';
-      } else {
-        partsView.innerHTML = '';
-        if (searchForm) partsView.appendChild(searchForm);
-        partsView.innerHTML += '<p>該当する部品が見つかりませんでした。</p>';
-        
-        // 検索ボタンのイベントリスナーを再設定
-        const searchButton = document.getElementById('searchButton');
-        if (searchButton) {
-          searchButton.addEventListener('click', function() {
-            searchPartsInCategory(categoryId, categoryName);
-          });
-        }
-        
-        const newQueryInput = document.getElementById('queryInput');
-        if (newQueryInput) {
-          newQueryInput.value = keyword;
-          newQueryInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-              searchPartsInCategory(categoryId, categoryName);
-            }
-          });
-        }
-        
-        statusElement.textContent = `カテゴリ「${escapeHtml(categoryName)}」で「${escapeHtml(keyword)}」に一致する部品はありません。`;
-        statusElement.className = 'status';
-      }
-      
-    } catch (error) {
-      console.error('検索エラー:', error);
-      statusElement.textContent = `検索中にエラーが発生しました: ${error.message}`;
-      statusElement.className = 'status error';
-    }
+    }, 100);
   }
   
   // ビュー切り替えコントロールを更新
@@ -745,6 +751,7 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
       
       let sql;
+      let params = [];
       
       if (keyword === '') {
         // 空の検索の場合は全カテゴリ表示（ID順）
@@ -756,12 +763,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // 検索キーワードがある場合（ID順）
         sql = `
           SELECT id, name FROM categories
-          WHERE name LIKE '%${keyword}%'
+          WHERE name LIKE '%' || ? || '%'
           ORDER BY id ASC
         `;
+        params = [keyword];
       }
       
       const stmt = db.prepare(sql);
+      if (params.length > 0) {
+        stmt.bind(params);
+      }
       
       let html = searchBar;
       
@@ -788,6 +799,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       html += '</div>';
+      stmt.free();
       
       if (hasCategories) {
         categoriesView.innerHTML = html;
@@ -834,18 +846,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // HTML特殊文字をエスケープする関数（XSS対策）
-  function escapeHtml(unsafe) {
-    if (unsafe === null || unsafe === undefined) return '';
-    return unsafe
-      .toString()
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-  
   // データベースの初期化
+  console.log('アプリケーション開始');
   initDb();
 });
