@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (tabName === 'categories') {
         categoriesView.style.display = 'block';
         searchView.style.display = 'none';
+        partsView.style.display = 'none';
         
         // カテゴリ一覧を表示
         if (currentView !== 'parts') {
@@ -99,8 +100,9 @@ document.addEventListener('DOMContentLoaded', function() {
       } else if (tabName === 'search') {
         categoriesView.style.display = 'none';
         searchView.style.display = 'block';
+        partsView.style.display = 'none';
         
-        // 検索ビューを初期化
+        // 検索ビューを初期化（必ずリセット）
         showSearchView(true); // 検索フォームをリセット
         
         if (currentView !== 'parts') {
@@ -116,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 既存の検索コンテナがある場合
     const existingContainer = searchView.querySelector('.search-container');
     
+    // resetFormがtrueの場合は常に新しいフォームを作成
     if (!existingContainer || resetForm) {
       const searchForm = `
         <div class="search-container">
@@ -125,12 +128,8 @@ document.addEventListener('DOMContentLoaded', function() {
         <div id="globalSearchResults"></div>
       `;
       
-      // リセットが指定された場合は検索結果もクリア
-      if (resetForm && existingContainer) {
-        searchView.innerHTML = searchForm;
-      } else if (!existingContainer) {
-        searchView.innerHTML = searchForm;
-      }
+      // 検索ビューの内容を完全にリセット
+      searchView.innerHTML = searchForm;
       
       // 検索ボタンのイベントリスナーを設定
       const globalSearchButton = document.getElementById('globalSearchButton');
@@ -221,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <tr>
           <th>在庫数</th>
           <th>部品名</th>
-          <th>ロジック系統</th>
+          <th>種別</th>
           <th>型番</th>
           <th>説明</th>
           <th>カテゴリ</th>
@@ -353,10 +352,10 @@ document.addEventListener('DOMContentLoaded', function() {
         <h2>カテゴリを選択してください</h2>
       `;
       
-      // カテゴリ一覧の取得 - カテゴリ全件表示
+      // カテゴリ一覧の取得 - ID順で表示
       const sql = `
         SELECT id, name FROM categories
-        ORDER BY name
+        ORDER BY id ASC
       `;
       
       const stmt = db.prepare(sql);
@@ -600,8 +599,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const stmt = db.prepare(sql);
       stmt.bind(params);
       
-      let rows = [];
-      // テーブルのヘッダー部分を修正
       let html = `<table>
         <tr>
           <th>部品名</th>
@@ -735,17 +732,17 @@ document.addEventListener('DOMContentLoaded', function() {
       let sql;
       
       if (keyword === '') {
-        // 空の検索の場合は全カテゴリ表示
+        // 空の検索の場合は全カテゴリ表示（ID順）
         sql = `
           SELECT id, name FROM categories
-          ORDER BY name
+          ORDER BY id ASC
         `;
       } else {
-        // 検索キーワードがある場合
+        // 検索キーワードがある場合（ID順）
         sql = `
           SELECT id, name FROM categories
           WHERE name LIKE '%${keyword}%'
-          ORDER BY name
+          ORDER BY id ASC
         `;
       }
       
