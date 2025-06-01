@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>電子パーツ在庫ビューア</title>
+    
+    <!-- Content Security Policy（WebAssembly対応版） -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
+      connect-src 'self' https://cdnjs.cloudflare.com;
+      img-src 'self' data:;
+      object-src 'none';
+      base-uri 'self';
+    ">
+    
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -27,35 +39,9 @@
     </div>
 
     <!-- SQL.js ライブラリの読み込み -->
-    <script>
-        // SQL.js の読み込み設定
-        window.SQL_JS_CONFIG = {
-            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-        };
-    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     
     <!-- メインアプリケーション -->
     <script src="js/app.js"></script>
-    
-    <!-- 読み込み確認スクリプト -->
-    <script>
-        // SQL.js 読み込み確認
-        console.log('SQL.js availability check:');
-        console.log('initSqlJs:', typeof initSqlJs);
-        console.log('window.SQL:', typeof window.SQL);
-        
-        // 読み込み完了の確認
-        if (typeof initSqlJs === 'undefined') {
-            console.error('SQL.js の読み込みに失敗しました');
-            const statusElement = document.getElementById('status');
-            if (statusElement) {
-                statusElement.textContent = 'エラー: SQL.jsライブラリの読み込みに失敗しました。';
-                statusElement.className = 'status error';
-            }
-        } else {
-            console.log('SQL.js 読み込み確認完了');
-        }
-    </script>
 </body>
 </html>

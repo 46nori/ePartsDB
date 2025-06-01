@@ -748,27 +748,59 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('データベース初期化開始');
     statusElement.textContent = 'SQL.jsライブラリを読み込み中...';
     
+    // SQL.jsの可用性を確認
+    if (typeof initSqlJs === 'undefined') {
+      statusElement.textContent = 'エラー: SQL.jsライブラリが読み込まれていません';
+      statusElement.className = 'status error';
+      return;
+    }
+    
     initSqlJs({
       locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
     })
     .then(SQL => {
-      console.log('SQL.js読み込み完了');
+      console.log('SQL.js読み込み完了:', typeof SQL);
       statusElement.textContent = 'データベースファイルをダウンロード中...';
+      
+      // SQLオブジェクトの検証
+      if (!SQL || typeof SQL.Database !== 'function') {
+        throw new Error('SQL.jsの初期化に失敗しました');
+      }
+      
+      // SQLオブジェクトをローカル変数として保持
+      window.SQLInstance = SQL;
+      
       return fetch(DB_URL);
     })
     .then(response => {
+      console.log('データベースファイル取得:', response.status);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} - データベースファイルが見つかりませんでした`);
       }
       return response.arrayBuffer();
     })
     .then(buffer => {
-      return initSqlJs({
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-      }).then(SQL => {
-        db = new SQL.Database(new Uint8Array(buffer));
-        return db;
-      });
+      console.log('データベースバッファ取得完了:', buffer.byteLength, 'bytes');
+      
+      // SQLインスタンスの確認
+      if (!window.SQLInstance) {
+        throw new Error('SQLインスタンスが利用できません');
+      }
+      
+      // データベース作成
+      db = new window.SQLInstance.Database(new Uint8Array(buffer));
+      console.log('データベース作成完了');
+      
+      // 基本的なテストクエリを実行
+      const testStmt = db.prepare('SELECT name FROM sqlite_master WHERE type="table" LIMIT 1');
+      const hasTable = testStmt.step();
+      testStmt.free();
+      
+      if (!hasTable) {
+        throw new Error('データベースにテーブルが見つかりません');
+      }
+      
+      return db;
     })
     .then(() => {
       console.log('データベース初期化完了');
@@ -783,6 +815,14 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('データベース初期化エラー:', error);
       statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
+      
+      // 詳細なエラー情報をコンソールに出力
+      console.error('エラー詳細:', {
+        error: error,
+        initSqlJs: typeof initSqlJs,
+        SQLInstance: typeof window.SQLInstance,
+        buffer: arguments[0] ? 'available' : 'not available'
+      });
     });
   }
   
