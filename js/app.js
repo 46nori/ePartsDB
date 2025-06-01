@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
     return partName;
   }
   
-  // タブ機能
+  // タブ機能とページタイトル機能を統合
   function setupTabs() {
     const categoriesTab = document.getElementById('categories-tab');
     const searchTab = document.getElementById('search-tab');
@@ -96,6 +96,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (searchTab) {
       searchTab.onclick = function() {
         switchTab('search');
+      };
+    }
+    
+    // ページタイトルクリック機能も統合
+    if (pageTitle) {
+      pageTitle.onclick = function() {
+        if (currentTab !== 'categories') {
+          switchTab('categories');
+        }
+        showCategories();
+      };
+      
+      pageTitle.onmouseover = function() {
+        this.style.color = '#3498db';
+      };
+      
+      pageTitle.onmouseout = function() {
+        this.style.color = '#2c3e50';
       };
     }
   }
@@ -744,18 +762,12 @@ document.addEventListener('DOMContentLoaded', function() {
       return response.arrayBuffer();
     })
     .then(buffer => {
-      const SQL = window.initSqlJs.__SQL__ || window.SQL;
-      if (!SQL) {
-        return initSqlJs({
-          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-        }).then(SQL => {
-          db = new SQL.Database(new Uint8Array(buffer));
-          return db;
-        });
-      } else {
+      return initSqlJs({
+        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+      }).then(SQL => {
         db = new SQL.Database(new Uint8Array(buffer));
         return db;
-      }
+      });
     })
     .then(() => {
       console.log('データベース初期化完了');
@@ -773,8 +785,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // カテゴリ表示（セキュア版）
-  /* カテゴリ表示関数（検索バー削除版） */
+  // カテゴリ表示関数
   function showCategories() {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
@@ -895,32 +906,8 @@ document.addEventListener('DOMContentLoaded', function() {
     showPartsByCategory(validId, validName);
   }
 
-  // タイトルクリック
-  if (pageTitle) {
-    pageTitle.onclick = function() {
-      if (currentTab !== 'categories') {
-        currentTab = 'categories';
-        
-        const categoriesTab = document.getElementById('categories-tab');
-        const searchTab = document.getElementById('search-tab');
-        
-        if (categoriesTab && searchTab) {
-          categoriesTab.className = 'tab active';
-          searchTab.className = 'tab';
-        }
-      }
-      
-      showCategories();
-    };
-    
-    pageTitle.onmouseover = function() {
-      this.style.color = '#3498db';
-    };
-    
-    pageTitle.onmouseout = function() {
-      this.style.color = '#2c3e50';
-    };
-  }
+  // タブとタイトルの統合機能
+  setupTabs();
   
   // アプリ開始
   initDb();
