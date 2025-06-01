@@ -128,6 +128,86 @@ tr:hover {
   background-color: #e9ecef;
 }
 
+/* ソート機能のスタイル */
+.sortable-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.sortable-table th {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: bold;
+}
+
+.sortable-table td {
+  border: 1px solid #dee2e6;
+  padding: 8px;
+}
+
+.sortable-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 25px !important;
+  background-color: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.sortable-table th.sortable:hover {
+  background-color: #d1ecf1 !important;
+  color: #0c5460;
+}
+
+.sort-indicator {
+  font-size: 14px !important;
+  color: #007cba !important;
+  margin-left: 5px;
+  font-weight: bold;
+}
+
+.sortable-table th.sort-asc {
+  background-color: #cce7f0 !important;
+}
+
+.sortable-table th.sort-desc {
+  background-color: #cce7f0 !important;
+}
+
+/* CSS矢印の代わりにテキスト矢印を使用 */
+.sortable-table th.sortable::before {
+  content: "⇅";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ccc;
+  font-size: 12px;
+}
+
+.sortable-table th.sortable:hover::before {
+  color: #666;
+}
+
+.sortable-table th.sort-asc::before {
+  content: "▲";
+  color: #007cba !important;
+}
+
+.sortable-table th.sort-desc::before {
+  content: "▼";
+  color: #007cba !important;
+}
+
+/* テーブルコンテナのスタイル */
+.table-container {
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
 th.sortable {
   cursor: pointer;
 }
