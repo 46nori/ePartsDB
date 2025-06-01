@@ -24,21 +24,61 @@ document.addEventListener('DOMContentLoaded', function() {
     return qty;
   }
   
+  // 強化されたHTMLエスケープ関数
   function escapeHtml(unsafe) {
     if (unsafe === null || unsafe === undefined) return '';
-    return unsafe.toString()
+    return String(unsafe)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/'/g, "&#x27;")
+      .replace(/\//g, "&#x2F;")
+      .replace(/`/g, "&#x60;")
+      .replace(/=/g, "&#x3D;");
   }
   
+  // 入力値検証関数
+  function validateInput(input, type = 'string', maxLength = 255) {
+    if (input === null || input === undefined) {
+      return '';
+    }
+    
+    const str = String(input).trim();
+    
+    switch (type) {
+      case 'number':
+        const num = parseInt(str, 10);
+        return isNaN(num) ? 0 : Math.max(0, num);
+        
+      case 'string':
+        return str.substring(0, maxLength);
+        
+      case 'search':
+        // 検索用: 危険な文字を除去
+        return str.substring(0, maxLength).replace(/[<>\"'&;()]/g, '');
+        
+      default:
+        return str.substring(0, maxLength);
+    }
+  }
+  
+  // URL検証付きリンク生成
   function formatPartName(name, datasheetUrl) {
     const partName = escapeHtml(name || '');
+    
     if (datasheetUrl && datasheetUrl.trim() !== '') {
-      return `<a href="${escapeHtml(datasheetUrl)}" target="_blank" rel="noopener noreferrer">${partName}</a>`;
+      try {
+        const url = new URL(datasheetUrl);
+        // HTTPSまたはHTTPのみ許可
+        if (url.protocol === 'https:' || url.protocol === 'http:') {
+          return `<a href="${escapeHtml(datasheetUrl)}" target="_blank" rel="noopener noreferrer">${partName}</a>`;
+        }
+      } catch (e) {
+        console.warn('Invalid URL detected:', datasheetUrl);
+      }
     }
+    
     return partName;
   }
   
@@ -136,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentSortColumn = '';
   let currentSortDirection = 'asc';
 
-  // ソート可能なテーブルを生成する関数
+  // セキュアなテーブル生成
   function createSortableTable(data, tableType = 'global') {
     let html = '<table class="sortable-table">';
     
@@ -192,8 +232,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     data.forEach(row => {
       const quantity = row.quantity !== null && row.quantity !== undefined ? row.quantity : 0;
-      const categoryId = row.category_id || 0;
-      const categoryName = row.category_name || '未分類';
+      const categoryId = validateInput(row.category_id, 'number') || 0;
+      const categoryName = escapeHtml(row.category_name || '未分類');
       
       html += '<tr>';
       html += `<td style="text-align: right;">${formatStockQuantity(quantity)}</td>`;
@@ -204,9 +244,10 @@ document.addEventListener('DOMContentLoaded', function() {
       html += `<td>${escapeHtml(row.description || '')}</td>`;
       
       if (tableType === 'global') {
+        // XSS対策: data属性を使用してカテゴリリンクを安全に生成
         html += `<td>
-          <a href="#" onclick="selectCategory(${categoryId}, '${escapeHtml(categoryName)}'); return false;">
-            ${escapeHtml(categoryName)}
+          <a href="#" class="category-link" data-category-id="${categoryId}" data-category-name="${categoryName}">
+            ${categoryName}
           </a>
         </td>`;
       } else {
@@ -343,9 +384,37 @@ document.addEventListener('DOMContentLoaded', function() {
         setupTableSorting(sortedData, tableType, containerId);
       });
     });
+    
+    // カテゴリリンクのイベント設定（グローバル検索の場合のみ）
+    if (tableType === 'global') {
+      setupCategoryLinksInTable(containerId);
+    }
   }
 
-  // 全パーツ検索の検索関数
+  // テーブル内のカテゴリリンクのイベント設定
+  function setupCategoryLinksInTable(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const categoryLinks = container.querySelectorAll('.category-link');
+    categoryLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const categoryId = parseInt(this.dataset.categoryId, 10);
+        const categoryName = this.dataset.categoryName;
+        
+        if (isNaN(categoryId) || categoryId <= 0) {
+          console.error('Invalid category ID');
+          return;
+        }
+        
+        selectCategory(categoryId, categoryName);
+      });
+    });
+  }
+
+  // セキュアな全パーツ検索関数
   function doSearch() {
     try {
       console.log('検索開始');
@@ -354,7 +423,10 @@ document.addEventListener('DOMContentLoaded', function() {
       statusElement.className = 'status loading';
       
       const input = document.getElementById('globalSearchInput');
-      const searchTerm = input ? input.value.trim() : '';
+      const rawSearchTerm = input ? input.value.trim() : '';
+      
+      // 入力値検証
+      const searchTerm = validateInput(rawSearchTerm, 'search', 100);
       
       console.log('検索キーワード:', searchTerm);
       
@@ -385,8 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ORDER BY categories.id, parts.name ASC
         `;
         
-        const searchString = String(searchTerm);
-        params = [searchString, searchString, searchString, searchString, searchString, searchString];
+        params = [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
       }
       
       const stmt = db.prepare(sql);
@@ -409,13 +480,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (hasResults) {
         const results = document.getElementById('globalSearchResults');
         if (results) {
-          // ソート可能なテーブルを生成
           const tableHtml = createSortableTable(rows, 'global');
           results.innerHTML = tableHtml;
           
-          console.log('Table created, setting up sorting...');
-          
-          // ソート機能を設定
           setTimeout(() => {
             setupTableSorting(rows, 'global', 'globalSearchResults');
           }, 100);
@@ -424,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (searchTerm === '') {
           statusElement.textContent = `${rows.length}件のパーツが登録されています（ヘッダークリックでソート）`;
         } else {
-          statusElement.textContent = `「${searchTerm}」の検索結果: ${rows.length}件のパーツが見つかりました（ヘッダークリックでソート）`;
+          statusElement.textContent = `「${escapeHtml(searchTerm)}」の検索結果: ${rows.length}件のパーツが見つかりました（ヘッダークリックでソート）`;
         }
         statusElement.className = 'status';
       } else {
@@ -436,30 +503,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (searchTerm === '') {
           statusElement.textContent = 'パーツが登録されていません';
         } else {
-          statusElement.textContent = `「${searchTerm}」に一致するパーツは見つかりませんでした`;
+          statusElement.textContent = `「${escapeHtml(searchTerm)}」に一致するパーツは見つかりませんでした`;
         }
         statusElement.className = 'status';
       }
       
     } catch (error) {
       console.error('検索エラー:', error);
-      statusElement.textContent = 'エラーが発生しました: ' + error.message;
+      statusElement.textContent = 'エラーが発生しました: 検索処理に失敗しました';
       statusElement.className = 'status error';
     }
   }
-  
-  // カテゴリ内パーツ検索実行
+
+  // セキュアなカテゴリ内検索関数
   function doCategoryPartsSearch(categoryId, categoryName) {
     try {
       const input = document.getElementById('categoryPartsSearch');
-      const searchTerm = input ? input.value.trim() : '';
+      const rawSearchTerm = input ? input.value.trim() : '';
       
-      console.log(`カテゴリ内検索: "${searchTerm}" in category ${categoryName}`);
+      // 入力値検証
+      const searchTerm = validateInput(rawSearchTerm, 'search', 100);
+      const validCategoryId = validateInput(categoryId, 'number');
+      const validCategoryName = validateInput(categoryName, 'string', 100);
+      
+      console.log(`カテゴリ内検索: "${searchTerm}" in category ${validCategoryName}`);
       
       let sql, params;
       
       if (searchTerm === '') {
-        // 検索ワードが空の場合は全パーツを表示
         sql = `
           SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
           FROM parts
@@ -468,9 +539,8 @@ document.addEventListener('DOMContentLoaded', function() {
           WHERE parts.category_id = ?
           ORDER BY parts.name ASC
         `;
-        params = [categoryId];
+        params = [validCategoryId];
       } else {
-        // 検索ワードがある場合はフィルタリング
         sql = `
           SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
           FROM parts
@@ -487,8 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ORDER BY parts.name ASC
         `;
         
-        const searchString = String(searchTerm);
-        params = [categoryId, searchString, searchString, searchString, searchString, searchString, searchString];
+        params = [validCategoryId, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
       }
       
       const stmt = db.prepare(sql);
@@ -505,30 +574,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
       stmt.free();
 
-      // 検索結果を表示
       const resultsContainer = document.getElementById('categoryPartsResults');
       if (resultsContainer) {
         if (hasResults) {
-          // ソート可能なテーブルを生成
           const tableHtml = createSortableTable(rows, 'category');
           resultsContainer.innerHTML = tableHtml;
           
-          // ソート機能を設定
           setupTableSorting(rows, 'category', 'categoryPartsResults');
           
           if (searchTerm === '') {
-            statusElement.textContent = `カテゴリ「${categoryName}」に${rows.length}件のパーツが登録されています`;
+            statusElement.textContent = `カテゴリ「${validCategoryName}」に${rows.length}件のパーツが登録されています`;
           } else {
-            statusElement.textContent = `カテゴリ「${categoryName}」内の「${searchTerm}」検索結果: ${rows.length}件のパーツが見つかりました`;
+            statusElement.textContent = `カテゴリ「${validCategoryName}」内の「${escapeHtml(searchTerm)}」検索結果: ${rows.length}件のパーツが見つかりました`;
           }
           statusElement.className = 'status';
         } else {
           if (searchTerm === '') {
             resultsContainer.innerHTML = '<p>このカテゴリにはまだパーツが登録されていません。</p>';
-            statusElement.textContent = `カテゴリ「${categoryName}」にはパーツが登録されていません`;
+            statusElement.textContent = `カテゴリ「${validCategoryName}」にはパーツが登録されていません`;
           } else {
             resultsContainer.innerHTML = '<p>該当するパーツが見つかりませんでした。</p>';
-            statusElement.textContent = `カテゴリ「${categoryName}」内で「${searchTerm}」に一致するパーツは見つかりませんでした`;
+            statusElement.textContent = `カテゴリ「${validCategoryName}」内で「${escapeHtml(searchTerm)}」に一致するパーツは見つかりませんでした`;
           }
           statusElement.className = 'status';
         }
@@ -536,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
     } catch (error) {
       console.error('カテゴリ内検索エラー:', error);
-      statusElement.textContent = 'エラーが発生しました: ' + error.message;
+      statusElement.textContent = 'エラーが発生しました: 検索処理に失敗しました';
       statusElement.className = 'status error';
     }
   }
@@ -707,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // カテゴリ表示
+  // カテゴリ表示（セキュア版）
   function showCategories() {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
@@ -732,8 +798,10 @@ document.addEventListener('DOMContentLoaded', function() {
       while (stmt.step()) {
         hasCategories = true;
         const category = stmt.getAsObject();
+        
+        // XSS対策: data属性を使用
         html += `
-          <div class="category-card" onclick="selectCategory(${category.id}, '${escapeHtml(category.name)}')">
+          <div class="category-card" data-category-id="${escapeHtml(category.id)}" data-category-name="${escapeHtml(category.name)}">
             <h3>${escapeHtml(category.name)}</h3>
           </div>
         `;
@@ -744,6 +812,10 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (hasCategories) {
         categoriesView.innerHTML = html;
+        
+        // セキュアなイベントリスナー設定
+        setupCategoryCardEvents();
+        
         statusElement.textContent = 'データベースの読み込みが完了しました。';
         statusElement.className = 'status';
       } else {
@@ -765,11 +837,37 @@ document.addEventListener('DOMContentLoaded', function() {
       
     } catch (error) {
       console.error('カテゴリ読み込みエラー:', error);
-      statusElement.textContent = `カテゴリ情報の取得中にエラーが発生しました: ${error.message}`;
+      statusElement.textContent = `カテゴリ情報の取得中にエラーが発生しました`;
       statusElement.className = 'status error';
     }
   }
-  
+
+  // セキュアなカテゴリカードイベント設定
+  function setupCategoryCardEvents() {
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+      card.addEventListener('click', function() {
+        const categoryId = parseInt(this.dataset.categoryId, 10);
+        const categoryName = this.dataset.categoryName;
+        
+        // 入力値検証
+        if (isNaN(categoryId) || categoryId <= 0) {
+          console.error('Invalid category ID');
+          return;
+        }
+        
+        if (!categoryName || categoryName.trim() === '') {
+          console.error('Invalid category name');
+          return;
+        }
+        
+        selectCategory(categoryId, categoryName);
+      });
+      
+      card.style.cursor = 'pointer';
+    });
+  }
+
   // ビュー制御
   function updateViewControls() {
     if (currentView === 'categories' || currentView === 'search') {
