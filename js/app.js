@@ -432,6 +432,170 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // 検索結果表示の共通関数
+  function displaySearchResults(rows, searchTerm, containerId, tableType, categoryName = '') {
+    const results = document.getElementById(containerId);
+    if (!results) return;
+    
+    if (rows.length > 0) {
+      const tableHtml = createSortableTable(rows, tableType);
+      results.innerHTML = tableHtml;
+      
+      setTimeout(() => {
+        setupTableSorting(rows, tableType, containerId);
+      }, 100);
+      
+      // ステータス表示
+      if (categoryName) {
+        if (searchTerm === '') {
+          statusElement.textContent = `カテゴリ「${categoryName}」に${rows.length}件のパーツが登録されています`;
+        } else {
+          statusElement.textContent = `カテゴリ「${categoryName}」内の「${escapeHtml(searchTerm)}」検索結果: ${rows.length}件のパーツが見つかりました`;
+        }
+      } else {
+        if (searchTerm === '') {
+          statusElement.textContent = `${rows.length}件のパーツが登録されています（ヘッダークリックでソート）`;
+        } else {
+          statusElement.textContent = `「${escapeHtml(searchTerm)}」の検索結果: ${rows.length}件のパーツが見つかりました（ヘッダークリックでソート）`;
+        }
+      }
+      statusElement.className = 'status';
+    } else {
+      results.innerHTML = '<p>該当するパーツが見つかりませんでした。</p>';
+      
+      // ステータス表示
+      if (categoryName) {
+        if (searchTerm === '') {
+          statusElement.textContent = `カテゴリ「${categoryName}」にはパーツが登録されていません`;
+        } else {
+          statusElement.textContent = `カテゴリ「${categoryName}」内で「${escapeHtml(searchTerm)}」に一致するパーツは見つかりませんでした`;
+        }
+      } else {
+        if (searchTerm === '') {
+          statusElement.textContent = 'パーツが登録されていません';
+        } else {
+          statusElement.textContent = `「${escapeHtml(searchTerm)}」に一致するパーツは見つかりませんでした`;
+        }
+      }
+      statusElement.className = 'status';
+    }
+  }
+
+  // 簡略化: 全パーツ検索関数
+  function doSearch() {
+    try {
+      statusElement.textContent = '検索中...';
+      statusElement.className = 'status loading';
+      
+      const input = document.getElementById('globalSearchInput');
+      const searchTerm = validateInput(input ? input.value.trim() : '', 'search', 100);
+      
+      let sql, params = [];
+      
+      if (searchTerm === '') {
+        sql = `
+          SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
+          FROM parts
+          LEFT JOIN categories ON parts.category_id = categories.id
+          LEFT JOIN inventory ON parts.id = inventory.part_id
+          ORDER BY categories.id, parts.name ASC
+        `;
+      } else {
+        sql = `
+          SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
+          FROM parts
+          LEFT JOIN categories ON parts.category_id = categories.id
+          LEFT JOIN inventory ON parts.id = inventory.part_id
+          WHERE (
+            parts.name LIKE '%' || ? || '%' OR
+            parts.part_number LIKE '%' || ? || '%' OR
+            parts.description LIKE '%' || ? || '%' OR
+            parts.logic_family LIKE '%' || ? || '%' OR
+            parts.package LIKE '%' || ? || '%' OR
+            categories.name LIKE '%' || ? || '%'
+          )
+          ORDER BY categories.id, parts.name ASC
+        `;
+        params = [searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
+      }
+      
+      const stmt = db.prepare(sql);
+      if (params.length > 0) {
+        stmt.bind(params);
+      }
+      
+      const rows = [];
+      while (stmt.step()) {
+        rows.push(stmt.getAsObject());
+      }
+      stmt.free();
+
+      displaySearchResults(rows, searchTerm, 'globalSearchResults', 'global');
+      
+    } catch (error) {
+      console.error('検索エラー:', error);
+      statusElement.textContent = 'エラーが発生しました: 検索処理に失敗しました';
+      statusElement.className = 'status error';
+    }
+  }
+
+  // 簡略化: カテゴリ内検索関数
+  function doCategoryPartsSearch(categoryId, categoryName) {
+    try {
+      const input = document.getElementById('categoryPartsSearch');
+      const searchTerm = validateInput(input ? input.value.trim() : '', 'search', 100);
+      const validCategoryId = validateInput(categoryId, 'number');
+      const validCategoryName = validateInput(categoryName, 'string', 100);
+      
+      let sql, params;
+      
+      if (searchTerm === '') {
+        sql = `
+          SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
+          FROM parts
+          LEFT JOIN categories ON parts.category_id = categories.id
+          LEFT JOIN inventory ON parts.id = inventory.part_id
+          WHERE parts.category_id = ?
+          ORDER BY parts.name ASC
+        `;
+        params = [validCategoryId];
+      } else {
+        sql = `
+          SELECT parts.*, categories.name AS category_name, categories.id AS category_id, inventory.quantity
+          FROM parts
+          LEFT JOIN categories ON parts.category_id = categories.id
+          LEFT JOIN inventory ON parts.id = inventory.part_id
+          WHERE parts.category_id = ? AND (
+            parts.name LIKE '%' || ? || '%' OR
+            parts.part_number LIKE '%' || ? || '%' OR
+            parts.description LIKE '%' || ? || '%' OR
+            parts.logic_family LIKE '%' || ? || '%' OR
+            parts.package LIKE '%' || ? || '%' OR
+            parts.manufacturer LIKE '%' || ? || '%'
+          )
+          ORDER BY parts.name ASC
+        `;
+        params = [validCategoryId, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm];
+      }
+      
+      const stmt = db.prepare(sql);
+      stmt.bind(params);
+      
+      const rows = [];
+      while (stmt.step()) {
+        rows.push(stmt.getAsObject());
+      }
+      stmt.free();
+
+      displaySearchResults(rows, searchTerm, 'categoryPartsResults', 'category', validCategoryName);
+      
+    } catch (error) {
+      console.error('カテゴリ内検索エラー:', error);
+      statusElement.textContent = 'エラーが発生しました: 検索処理に失敗しました';
+      statusElement.className = 'status error';
+    }
+  }
+  
   // セキュアな全パーツ検索関数
   function doSearch() {
     try {
