@@ -774,6 +774,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // カテゴリ表示（セキュア版）
+  /* カテゴリ表示関数（検索バー削除版） */
   function showCategories() {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
@@ -782,17 +783,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     try {
-      const searchBar = `
-        <div class="search-container">
-          <input type="text" id="categorySearch" placeholder="カテゴリ検索">
-          <button id="categorySearchButton">検索</button>
-        </div>
-        <h2>カテゴリを選択してください</h2>
-      `;
-      
       const stmt = db.prepare('SELECT id, name FROM categories ORDER BY id ASC');
       
-      let html = searchBar + '<div class="category-container">';
+      let html = '<h2>カテゴリを選択してください</h2><div class="category-container">';
       let hasCategories = false;
       
       while (stmt.step()) {
@@ -819,7 +812,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusElement.textContent = 'データベースの読み込みが完了しました。';
         statusElement.className = 'status';
       } else {
-        categoriesView.innerHTML = searchBar + '<p>カテゴリが見つかりませんでした。</p>';
+        categoriesView.innerHTML = '<h2>カテゴリを選択してください</h2><p>カテゴリが見つかりませんでした。</p>';
         statusElement.textContent = 'カテゴリ情報が登録されていません。';
         statusElement.className = 'status';
       }
@@ -886,13 +879,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // グローバル関数
-  window.selectCategory = function(categoryId, categoryName) {
-    currentCategoryId = categoryId;
-    currentCategoryName = categoryName;
-    showPartsByCategory(categoryId, categoryName);
-  };
-  
+  // カテゴリ選択
+  function selectCategory(categoryId, categoryName) {
+    // 入力値検証
+    const validId = validateInput(categoryId, 'number');
+    const validName = validateInput(categoryName, 'string', 100);
+    
+    if (validId === 0) {
+      console.error('Invalid category ID');
+      return;
+    }
+    
+    currentCategoryId = validId;
+    currentCategoryName = validName;
+    showPartsByCategory(validId, validName);
+  }
+
   // タイトルクリック
   if (pageTitle) {
     pageTitle.onclick = function() {
