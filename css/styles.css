@@ -175,114 +175,425 @@ button:hover {
 }
 
 /* タブ切り替え */
+/* タブコンテナ */
 .tabs {
   display: flex;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #dee2e6;
-  overflow-x: auto;
+  border-bottom: 2px solid #e1e5e9;
+  margin-bottom: 20px;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
 }
 
+/* タブボタン */
 .tab {
-  padding: 8px 16px;
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: #f8f9fa;
+  color: #495057;
   cursor: pointer;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
-  margin-right: 4px;
-  white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  position: relative;
 }
 
-.tab.active {
-  background-color: #f8f9fa;
-  border-color: #dee2e6;
-  border-bottom-color: #f8f9fa;
-  margin-bottom: -1px;
-  font-weight: 600;
-}
-
+/* 非アクティブタブのホバー状態 */
 .tab:hover:not(.active) {
-  background-color: #e9ecef;
+  background: #e9ecef;
+  color: #343a40;
+  border-bottom-color: #adb5bd;
 }
 
-/* カテゴリカード */
+/* アクティブタブ */
+.tab.active {
+  background: #ffffff;
+  color: #007bff;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+  box-shadow: 0 -2px 8px rgba(0,123,255,0.1);
+}
+
+/* タブのフォーカス状態（アクセシビリティ向上） */
+.tab:focus {
+  outline: 2px solid #007bff;
+  outline-offset: -2px;
+}
+
+/* ダークモード対応（オプション） */
+@media (prefers-color-scheme: dark) {
+  .tabs {
+    background: #343a40;
+    border-bottom-color: #495057;
+  }
+  
+  .tab {
+    background: #343a40;
+    color: #f8f9fa;
+  }
+  
+  .tab:hover:not(.active) {
+    background: #495057;
+    color: #ffffff;
+  }
+  
+  .tab.active {
+    background: #495057;
+    color: #ffffff;
+    border-bottom-color: #17a2b8;
+  }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    border-bottom: 1px solid #e1e5e9;
+    border-radius: 0;
+  }
+  
+  .tab:last-child {
+    border-bottom: none;
+  }
+  
+  .tab.active {
+    border-bottom-color: #007bff;
+    border-left: 4px solid #007bff;
+  }
+}
+
+/* 環境インジケーター */
+.environment-indicator {
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.env-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.env-status.local {
+  background: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.env-status.remote {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.env-icon {
+  font-size: 1.2em;
+}
+
+.env-text {
+  font-weight: 500;
+}
+
+.change-indicator {
+  background: #ffc107;
+  color: #856404;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+/* ローカル操作ボタン */
+.local-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-action:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.btn-action:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+#add-part-btn {
+  background: #28a745;
+}
+
+#add-part-btn:hover {
+  background: #1e7e34;
+}
+
+#sync-btn {
+  background: #17a2b8;
+}
+
+#sync-btn:hover:not(:disabled) {
+  background: #117a8b;
+}
+
+#reset-btn {
+  background: #dc3545;
+}
+
+#reset-btn:hover {
+  background: #c82333;
+}
+
+/* テーブル行アクションボタン */
+.actions-column {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actions {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actions .btn-edit,
+.actions .btn-inventory,
+.actions .btn-delete {
+  padding: 4px 8px;
+  margin: 0 2px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+  transition: all 0.2s;
+  min-width: 32px;
+  height: 28px;
+}
+
+.btn-edit {
+  background: #ffc107;
+  color: #856404;
+}
+
+.btn-edit:hover {
+  background: #e0a800;
+  transform: scale(1.1);
+}
+
+.btn-inventory {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-inventory:hover {
+  background: #117a8b;
+  transform: scale(1.1);
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .local-actions {
+    flex-direction: column;
+  }
+  
+  .btn-action {
+    width: 100%;
+  }
+  
+  .actions-column {
+    min-width: 120px;
+  }
+  
+  .actions .btn-edit,
+  .actions .btn-inventory,
+  .actions .btn-delete {
+    display: block;
+    margin: 2px 0;
+    width: 100%;
+  }
+}
+
+/* ツールチップ風のタイトル属性スタイル */
+.btn-edit[title]:hover::after,
+.btn-inventory[title]:hover::after,
+.btn-delete[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  background: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-top: -30px;
+  margin-left: -20px;
+  pointer-events: none;
+}
+
+/* カテゴリ表示 */
 .category-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
-  margin-top: 20px;
+  gap: 12px;
+  margin: 20px 0;
 }
 
 .category-card {
-  padding: 16px;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
+  background: #ffffff;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  text-align: center;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .category-card:hover {
-  background-color: #e9ecef;
-  transform: translateY(-2px);
-  box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+  border-color: #007bff;
+  background: #f8f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,123,255,0.12);
+}
+
+.category-card:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .category-card h3 {
   margin: 0;
-  font-size: 1rem;
-  text-align: center;
+  color: #2c3e50;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-/* リンク */
-a {
-  color: #3498db;
-  text-decoration: none;
+.category-card:hover h3 {
+  color: #007bff;
 }
 
-a:hover {
-  text-decoration: underline;
+/* レスポンシブ対応 - カテゴリ（修正版） */
+@media (max-width: 768px) {
+  .category-container {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  
+  .category-card {
+    padding: 10px 12px;
+    min-height: 40px;
+  }
+  
+  .category-card h3 {
+    font-size: 0.85rem;
+  }
 }
 
-/* 在庫数の表示スタイル */
+@media (max-width: 480px) {
+  .category-container {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  
+  .category-card {
+    padding: 8px 10px;
+    min-height: 35px;
+  }
+  
+  .category-card h3 {
+    font-size: 0.8rem;
+  }
+}
+
+/* 在庫レベル表示 */
 .stock-zero {
-  color: #dc3545 !important;
+  color: #dc3545;
   font-weight: bold;
 }
 
 .stock-low {
-  color: #ffc107 !important;
+  color: #ffc107;
   font-weight: bold;
 }
 
-/* レスポンシブデザイン - タブレット */
+.stock-ok {
+  color: #28a745;
+}
+
+/* パーツ名リンク */
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* カテゴリリンク */
+.category-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.category-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* ビュー表示制御 */
+.view {
+  min-height: 200px;
+}
+
+/* テーブルのレスポンシブ対応 */
 @media (max-width: 768px) {
-  body {
-    padding: 12px;
-    font-size: 14px;
-  }
-  
-  h1 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-  }
-  
-  h2 {
-    font-size: 1.2rem;
-  }
-  
-  .search-container {
-    gap: 6px;
-    margin-bottom: 15px;
-  }
-  
-  button {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-  }
-  
   .sortable-table {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
   
   .sortable-table th,
@@ -290,95 +601,29 @@ a:hover {
     padding: 6px 4px;
   }
   
-  .category-container {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 12px;
+  .search-container {
+    flex-direction: column;
   }
   
-  .category-card {
-    padding: 12px;
+  input[type="text"] {
+    min-width: 100%;
+    margin-bottom: 8px;
   }
   
-  .category-card h3 {
-    font-size: 0.9rem;
-  }
-  
-  .sortable-table th[data-column="quantity"],
-  .sortable-table td:first-child {
-    width: 60px;
-    min-width: 50px;
-  }
-}
-
-/* レスポンシブデザイン - スマートフォン */
-@media (max-width: 480px) {
-  body {
-    padding: 8px;
-    font-size: 13px;
-  }
-  
-  h1 {
-    font-size: 1.3rem;
-    margin-bottom: 12px;
-  }
-  
-  .sortable-table {
-    font-size: 0.7rem;
-  }
-  
-  .sortable-table th,
-  .sortable-table td {
-    padding: 5px 3px;
-  }
-  
-  .category-container {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 8px;
-  }
-  
-  .tab {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-  
-  .status {
-    margin: 12px 0;
-    padding: 8px;
-    font-size: 0.8rem;
-  }
-  
-  .sortable-table th[data-column="quantity"],
-  .sortable-table td:first-child {
-    width: 50px;
-    min-width: 40px;
-  }
-}
-
-/* アクセシビリティ */
-button:focus,
-input:focus {
-  outline: 2px solid #3498db;
-  outline-offset: 2px;
-}
-
-/* 印刷時のスタイル */
-@media print {
-  body {
-    font-size: 12px;
-    color: black;
-  }
-  
-  .search-container,
-  .tabs,
   button {
-    display: none;
+    width: 100%;
   }
-  
-  .sortable-table {
-    font-size: 10px;
-  }
-  
-  .category-card {
-    break-inside: avoid;
+}
+
+/* テーブルの横スクロール対応 */
+.table-container {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
   }
 }

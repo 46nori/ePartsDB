@@ -1,8 +1,8 @@
-/* filepath: /Users/m46nori/Documents/GitHub/ePartsDB/js/app.js */
-// 電子パーツ在庫ビューア - 最適化済みメインアプリケーション
+/* 電子パーツ在庫ビューア - ローカル編集機能対応版 */
 
 document.addEventListener('DOMContentLoaded', function() {
   let db;
+  let originalDb; // マスターデータベース
   const statusElement = document.getElementById('status');
   const categoriesView = document.getElementById('categories-view');
   const partsView = document.getElementById('parts-view');
@@ -19,7 +19,180 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentSortColumn = '';
   let currentSortDirection = 'asc';
   
-  // ユーティリティ関数
+  // ローカル編集機能の新規変数
+  const isLocalEnvironment = checkLocalEnvironment();
+  let hasLocalChanges = false;
+  let localChanges = {
+    added: [],
+    modified: [],
+    deleted: [],
+    inventory: []
+  };
+
+  // 環境判定関数
+  function checkLocalEnvironment() {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '' ||
+      protocol === 'file:' ||
+      hostname.endsWith('.local')
+    );
+  }
+
+  // 変更追跡関数
+  function trackChange(type, data) {
+    if (!isLocalEnvironment) return;
+    
+    localChanges[type].push(data);
+    hasLocalChanges = true;
+    updateChangeIndicator();
+    updateSyncButton();
+  }
+
+  // 変更インジケーター更新
+  function updateChangeIndicator() {
+    const indicator = document.getElementById('change-indicator');
+    if (!indicator) return;
+    
+    const totalChanges = Object.values(localChanges).reduce((sum, arr) => sum + arr.length, 0);
+    
+    if (totalChanges > 0) {
+      indicator.textContent = `未保存の変更: ${totalChanges}件`;
+      indicator.style.display = 'inline-block';
+    } else {
+      indicator.style.display = 'none';
+    }
+  }
+
+  // 同期ボタン更新
+  function updateSyncButton() {
+    const syncBtn = document.getElementById('sync-btn');
+    if (!syncBtn) return;
+    
+    syncBtn.disabled = !hasLocalChanges;
+    syncBtn.textContent = hasLocalChanges ? '📤 同期' : '📤 同期（変更なし）';
+  }
+
+  // 環境UI作成
+  function createEnvironmentUI() {
+    const envContainer = document.createElement('div');
+    envContainer.className = 'environment-indicator';
+    
+    if (isLocalEnvironment) {
+      envContainer.innerHTML = `
+        <div class="env-status local">
+          <span class="env-icon">💻</span>
+          <span class="env-text">ローカル環境（編集可能）</span>
+          <span id="change-indicator" class="change-indicator" style="display: none;">未保存の変更: 0件</span>
+        </div>
+        <div class="local-actions">
+          <button id="add-part-btn" class="btn-action">➕ パーツ追加</button>
+          <button id="sync-btn" class="btn-action" disabled>📤 同期（変更なし）</button>
+          <button id="reset-btn" class="btn-action">🔄 リセット</button>
+        </div>
+      `;
+    } else {
+      envContainer.innerHTML = `
+        <div class="env-status remote">
+          <span class="env-icon">🌐</span>
+          <span class="env-text">リモート環境（読み取り専用）</span>
+        </div>
+      `;
+    }
+    
+    // ステータス要素の後に挿入
+    statusElement.parentNode.insertBefore(envContainer, tabsContainer);
+    
+    // ローカル環境のボタンイベント設定
+    if (isLocalEnvironment) {
+      setupLocalEnvironmentEvents();
+    }
+  }
+
+  // ローカル環境イベント設定
+  function setupLocalEnvironmentEvents() {
+    setTimeout(() => {
+      const addPartBtn = document.getElementById('add-part-btn');
+      const syncBtn = document.getElementById('sync-btn');
+      const resetBtn = document.getElementById('reset-btn');
+
+      if (addPartBtn) {
+        addPartBtn.addEventListener('click', () => {
+          if (typeof showAddPartDialog === 'function') {
+            showAddPartDialog();
+          } else {
+            alert('パーツ追加機能（Phase 3で実装予定）');
+          }
+        });
+      }
+
+      if (syncBtn) {
+        syncBtn.addEventListener('click', () => {
+          if (hasLocalChanges) {
+            if (typeof syncToMaster === 'function') {
+              syncToMaster();
+            } else {
+              alert('同期機能（Phase 4で実装予定）');
+            }
+          }
+        });
+      }
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          if (hasLocalChanges) {
+            if (confirm('未保存の変更が失われます。マスターデータベースに戻しますか？')) {
+              resetToMaster();
+            }
+          } else {
+            alert('変更がないため、リセットは不要です。');
+          }
+        });
+      }
+    }, 100);
+  }
+
+  // マスターに戻す
+  function resetToMaster() {
+    if (!originalDb) {
+      alert('マスターデータベースが利用できません');
+      return;
+    }
+    
+    try {
+      // 作業用データベースを再作成
+      const masterData = originalDb.export();
+      db.close();
+      db = new window.SQLInstance.Database(masterData);
+      
+      // 変更履歴をクリア
+      localChanges = { added: [], modified: [], deleted: [], inventory: [] };
+      hasLocalChanges = false;
+      updateChangeIndicator();
+      updateSyncButton();
+      
+      // UI再描画
+      if (currentView === 'categories') {
+        showCategories();
+      } else if (currentView === 'parts' && currentCategoryId) {
+        showPartsByCategory(currentCategoryId, currentCategoryName);
+      }
+      
+      statusElement.textContent = 'マスターデータベースに戻しました';
+      statusElement.className = 'status';
+      
+    } catch (error) {
+      console.error('リセットエラー:', error);
+      statusElement.textContent = `リセットに失敗しました: ${error.message}`;
+      statusElement.className = 'status error';
+    }
+  }
+
+  // 既存のユーティリティ関数（変更なし）
   function formatStockQuantity(quantity) {
     const qty = quantity !== null ? quantity : 0;
     if (qty === 0) return `<span class="stock-zero">${qty}</span>`;
@@ -76,8 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     return partName;
   }
-  
-  // タブとナビゲーション機能
+
+  // タブとナビゲーション機能（変更なし）
   function setupTabs() {
     const categoriesTab = document.getElementById('categories-tab');
     const searchTab = document.getElementById('search-tab');
@@ -153,8 +326,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   }
-  
-  // 検索機能
+
+  // 検索機能（変更なし）
   function showSearchView(resetForm = false) {
     const existingContainer = searchView.querySelector('.search-container');
     
@@ -190,8 +363,8 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     }
   }
-  
-  // テーブル生成とソート機能
+
+  // テーブル生成とソート機能（行アクションボタン追加）
   function createSortableTable(data, tableType = 'global') {
     let html = '<table class="sortable-table">';
     
@@ -214,9 +387,14 @@ document.addEventListener('DOMContentLoaded', function() {
             外形 <span class="sort-indicator"></span>
           </th>
           <th data-column="description">説明</th>
-          <th data-column="category_name">カテゴリ</th>
-        </tr>
-      </thead>`;
+          <th data-column="category_name">カテゴリ</th>`;
+      
+      // ローカル環境の場合はアクション列を追加
+      if (isLocalEnvironment) {
+        html += `<th class="actions-column" style="width: 140px;">操作</th>`;
+      }
+      
+      html += `</tr></thead>`;
     } else {
       html += `<thead>
         <tr>
@@ -236,9 +414,14 @@ document.addEventListener('DOMContentLoaded', function() {
             外形 <span class="sort-indicator"></span>
           </th>
           <th data-column="description">説明</th>
-          <th data-column="manufacturer">メーカー</th>
-        </tr>
-      </thead>`;
+          <th data-column="manufacturer">メーカー</th>`;
+      
+      // ローカル環境の場合はアクション列を追加
+      if (isLocalEnvironment) {
+        html += `<th class="actions-column" style="width: 140px;">操作</th>`;
+      }
+      
+      html += `</tr></thead>`;
     }
     
     html += '<tbody>';
@@ -247,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const quantity = row.quantity !== null && row.quantity !== undefined ? row.quantity : 0;
       const categoryId = validateInput(row.category_id, 'number') || 0;
       const categoryName = escapeHtml(row.category_name || '未分類');
+      const partId = row.id;
       
       html += '<tr>';
       html += `<td style="text-align: right;">${formatStockQuantity(quantity)}</td>`;
@@ -266,6 +450,15 @@ document.addEventListener('DOMContentLoaded', function() {
         html += `<td>${escapeHtml(row.manufacturer || '')}</td>`;
       }
       
+      // ローカル環境の場合はアクションボタンを追加
+      if (isLocalEnvironment) {
+        html += `<td class="actions" style="white-space: nowrap;">
+          <button class="btn-edit" data-part-id="${partId}" title="パーツを編集">✏️</button>
+          <button class="btn-inventory" data-part-id="${partId}" title="在庫を変更">📦</button>
+          <button class="btn-delete" data-part-id="${partId}" title="パーツを削除">🗑️</button>
+        </td>`;
+      }
+      
       html += '</tr>';
     });
     
@@ -274,6 +467,56 @@ document.addEventListener('DOMContentLoaded', function() {
     return html;
   }
 
+  // 行アクションボタンのイベント設定
+  function setupRowActionEvents(containerId) {
+    if (!isLocalEnvironment) return;
+    
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // 編集ボタン
+    container.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const partId = parseInt(btn.dataset.partId, 10);
+        if (typeof showEditPartDialog === 'function') {
+          showEditPartDialog(partId);
+        } else {
+          alert(`パーツID ${partId} の編集機能（Phase 3で実装予定）`);
+        }
+      });
+    });
+    
+    // 在庫ボタン
+    container.querySelectorAll('.btn-inventory').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const partId = parseInt(btn.dataset.partId, 10);
+        if (typeof showInventoryDialog === 'function') {
+          showInventoryDialog(partId);
+        } else {
+          alert(`パーツID ${partId} の在庫変更機能（Phase 3で実装予定）`);
+        }
+      });
+    });
+    
+    // 削除ボタン
+    container.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const partId = parseInt(btn.dataset.partId, 10);
+        if (typeof showDeleteConfirmDialog === 'function') {
+          showDeleteConfirmDialog(partId);
+        } else {
+          if (confirm(`パーツID ${partId} を削除しますか？\n（Phase 3で詳細な削除機能を実装予定）`)) {
+            alert('削除機能は Phase 3 で実装されます');
+          }
+        }
+      });
+    });
+  }
+
+  // ソート機能（変更なし、但しsetupRowActionEventsを追加）
   function sortData(data, column, direction) {
     return data.sort((a, b) => {
       let valueA = a[column];
@@ -332,11 +575,9 @@ document.addEventListener('DOMContentLoaded', function() {
       header.style.cursor = 'pointer';
       header.title = `${header.textContent.replace(/\s*[↑↓]\s*$/, '').trim()}でソート`;
       
-      // 既存のイベントリスナーを削除
       header.replaceWith(header.cloneNode(true));
     });
     
-    // 新しいヘッダー要素を取得してイベントを設定
     const newHeaders = container.querySelectorAll('th.sortable');
     newHeaders.forEach((header) => {
       const column = header.dataset.column;
@@ -358,12 +599,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         updateSortIndicators(column, currentSortDirection, containerId);
         setupTableSorting(sortedData, tableType, containerId);
+        
+        // 行アクションボタンのイベントを再設定
+        setupRowActionEvents(containerId);
       });
     });
     
     if (tableType === 'global') {
       setupCategoryLinksInTable(containerId);
     }
+    
+    // 行アクションボタンのイベントを設定
+    setupRowActionEvents(containerId);
   }
 
   function setupCategoryLinksInTable(containerId) {
@@ -388,7 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // 検索結果表示の共通関数
+  // 検索結果表示の共通関数（setupRowActionEvents追加）
   function displaySearchResults(rows, searchTerm, containerId, tableType, categoryName = '') {
     const results = document.getElementById(containerId);
     if (!results) return;
@@ -568,7 +815,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // カテゴリとパーツ表示機能
   function showPartsByCategory(categoryId, categoryName) {
     if (!db) {
       statusElement.textContent = 'データベースがまだ読み込まれていません。';
@@ -742,13 +988,12 @@ document.addEventListener('DOMContentLoaded', function() {
     currentCategoryName = validName;
     showPartsByCategory(validId, validName);
   }
-  
-  // データベース初期化
+
+  // データベース初期化（ダブルDB対応）
   function initDb() {
     console.log('データベース初期化開始');
     statusElement.textContent = 'SQL.jsライブラリを読み込み中...';
     
-    // SQL.jsの可用性を確認
     if (typeof initSqlJs === 'undefined') {
       statusElement.textContent = 'エラー: SQL.jsライブラリが読み込まれていません';
       statusElement.className = 'status error';
@@ -762,12 +1007,10 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('SQL.js読み込み完了:', typeof SQL);
       statusElement.textContent = 'データベースファイルをダウンロード中...';
       
-      // SQLオブジェクトの検証
       if (!SQL || typeof SQL.Database !== 'function') {
         throw new Error('SQL.jsの初期化に失敗しました');
       }
       
-      // SQLオブジェクトをローカル変数として保持
       window.SQLInstance = SQL;
       
       return fetch(DB_URL);
@@ -782,14 +1025,23 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(buffer => {
       console.log('データベースバッファ取得完了:', buffer.byteLength, 'bytes');
       
-      // SQLインスタンスの確認
       if (!window.SQLInstance) {
         throw new Error('SQLインスタンスが利用できません');
       }
       
-      // データベース作成
-      db = new window.SQLInstance.Database(new Uint8Array(buffer));
-      console.log('データベース作成完了');
+      // マスターデータベース作成
+      originalDb = new window.SQLInstance.Database(new Uint8Array(buffer));
+      console.log('マスターデータベース作成完了');
+      
+      // 作業用データベース作成
+      if (isLocalEnvironment) {
+        console.log('ローカル環境: 作業用データベースを作成');
+        const workingData = originalDb.export();
+        db = new window.SQLInstance.Database(workingData);
+      } else {
+        console.log('リモート環境: 読み取り専用データベース');
+        db = originalDb;
+      }
       
       // 基本的なテストクエリを実行
       const testStmt = db.prepare('SELECT name FROM sqlite_master WHERE type="table" LIMIT 1');
@@ -804,8 +1056,13 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(() => {
       console.log('データベース初期化完了');
+      console.log('環境:', isLocalEnvironment ? 'ローカル（編集可能）' : 'リモート（読み取り専用）');
+      
       statusElement.textContent = 'データベースの読み込みが完了しました。';
       statusElement.className = 'status';
+      
+      // 環境UIを作成
+      createEnvironmentUI();
       
       tabsContainer.style.display = 'block';
       setupTabs();
@@ -816,12 +1073,11 @@ document.addEventListener('DOMContentLoaded', function() {
       statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
       
-      // 詳細なエラー情報をコンソールに出力
       console.error('エラー詳細:', {
         error: error,
         initSqlJs: typeof initSqlJs,
         SQLInstance: typeof window.SQLInstance,
-        buffer: arguments[0] ? 'available' : 'not available'
+        isLocal: isLocalEnvironment
       });
     });
   }

@@ -24,24 +24,38 @@
         
         <div id="status" class="status">初期化中...</div>
         
+        <!-- 環境インジケーターはJavaScriptで動的挿入 -->
+        
         <div id="tabs-container" style="display: none;">
             <div class="tabs">
-                <div id="categories-tab" class="tab active">カテゴリ一覧</div>
-                <div id="search-tab" class="tab">全パーツ検索</div>
+                <button id="categories-tab" class="tab active">カテゴリ</button>
+                <button id="search-tab" class="tab">全パーツ検索</button>
             </div>
         </div>
         
         <div id="view-controls"></div>
         
-        <div id="categories-view" class="view"></div>
-        <div id="parts-view" class="view" style="display: none;"></div>
-        <div id="search-view" class="view" style="display: none;"></div>
+        <div id="categories-view" class="view">
+            <h2>カテゴリを選択してください</h2>
+            <div class="category-container">
+                <!-- カテゴリがここに表示されます -->
+            </div>
+        </div>
+        
+        <div id="parts-view" class="view" style="display: none;">
+            <!-- パーツ一覧がここに表示されます -->
+        </div>
+        
+        <div id="search-view" class="view" style="display: none;">
+            <!-- 検索機能がここに表示されます -->
+        </div>
     </div>
 
-    <!-- SQL.js ライブラリの読み込み -->
+    <!-- SQL.js ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     
-    <!-- メインアプリケーション -->
+    <!-- アプリケーションスクリプト（Phase 2まで） -->
+    <script src="js/local-database.js"></script>  <!-- Phase 3で本格実装 -->
     <script src="js/app.js"></script>
 </body>
 </html>
