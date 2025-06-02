@@ -290,19 +290,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
 
-  // タブ設定
+  // タブ設定（修正版 - 初期状態の改善）
   function setupTabs() {
     console.log('タブ設定開始');
     const categoriesTab = document.getElementById('categories-tab');
     const searchTab = document.getElementById('search-tab');
     
+    // 初期状態でカテゴリタブをアクティブに設定
     if (categoriesTab) {
+      categoriesTab.classList.add('active');
       categoriesTab.addEventListener('click', () => {
         switchTab('categories');
       });
     }
     
     if (searchTab) {
+      searchTab.classList.remove('active');
       searchTab.addEventListener('click', () => {
         switchTab('search');
       });
@@ -310,18 +313,21 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('タブ設定完了');
   }
 
-  // タブ切り替え
+  // タブ切り替え（修正版 - アクティブ状態の明確化）
   function switchTab(tabName) {
+    console.log('タブ切り替え:', tabName);
     currentTab = tabName;
     
-    // タブのアクティブ状態を更新
+    // すべてのタブからアクティブ状態を削除
     document.querySelectorAll('.tab').forEach(tab => {
       tab.classList.remove('active');
     });
     
+    // 選択されたタブにアクティブ状態を追加
     const activeTab = document.getElementById(`${tabName}-tab`);
     if (activeTab) {
       activeTab.classList.add('active');
+      console.log('アクティブタブ設定:', tabName);
     }
     
     // ビューを切り替え
@@ -418,7 +424,101 @@ document.addEventListener('DOMContentLoaded', function() {
     return qty;
   }
 
-  // パーツ一覧表示（修正版）
+  // テーブルソート機能（修正版 - sort-iconを削除）
+  function initTableSort(tableElement) {
+    const headers = tableElement.querySelectorAll('th');
+    
+    headers.forEach((header, index) => {
+      // 操作列はソート対象外
+      if (header.textContent.includes('操作')) return;
+      
+      header.style.cursor = 'pointer';
+      header.classList.add('sortable');
+      
+      // sort-iconは追加しない（CSSの::beforeで制御）
+      
+      header.addEventListener('click', () => {
+        sortTable(tableElement, index, header);
+      });
+    });
+  }
+
+  // テーブルソート実行（修正版 - sort-iconの操作を削除）
+  function sortTable(table, columnIndex, headerElement) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // データが存在しない場合はソートしない
+    if (rows.length <= 1 || rows[0].cells.length <= columnIndex) return;
+    
+    // 現在のソート状態を取得
+    const currentSort = headerElement.dataset.sort || 'none';
+    let newSort = 'asc';
+    
+    if (currentSort === 'asc') {
+      newSort = 'desc';
+    } else if (currentSort === 'desc') {
+      newSort = 'asc';
+    }
+    
+    // 他のヘッダーのソート状態をリセット
+    table.querySelectorAll('th').forEach(th => {
+      th.dataset.sort = 'none';
+      th.classList.remove('sort-asc', 'sort-desc');
+      // sort-iconの操作は不要（CSSで制御）
+    });
+    
+    // 現在のヘッダーにソート状態を設定
+    headerElement.dataset.sort = newSort;
+    headerElement.classList.add(`sort-${newSort}`);
+    // sort-iconの操作は不要（CSSで制御）
+    
+    // ソート実行
+    rows.sort((a, b) => {
+      const aCell = a.cells[columnIndex];
+      const bCell = b.cells[columnIndex];
+      
+      if (!aCell || !bCell) return 0;
+      
+      let aValue = getCellValue(aCell, columnIndex);
+      let bValue = getCellValue(bCell, columnIndex);
+      
+      // 数値比較（在庫数列）
+      if (columnIndex === 0) { // 在庫数列
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+        return newSort === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      // 文字列比較
+      const comparison = aValue.localeCompare(bValue, 'ja', { numeric: true });
+      return newSort === 'asc' ? comparison : -comparison;
+    });
+    
+    // ソート結果をテーブルに反映
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  // セル値を取得（在庫編集コントロールやリンクを考慮）
+  function getCellValue(cell, columnIndex) {
+    if (columnIndex === 0) { // 在庫数列
+      const input = cell.querySelector('.stock-input');
+      if (input) {
+        return input.value || '0';
+      }
+      return cell.textContent.trim();
+    }
+    
+    // リンクがある場合はテキストのみ取得
+    const link = cell.querySelector('a');
+    if (link) {
+      return link.textContent.trim();
+    }
+    
+    return cell.textContent.trim();
+  }
+
+  // パーツ一覧表示（修正版 - ソート機能追加）
   function showPartsByCategory(categoryId, categoryName) {
     currentView = 'parts';
     window.currentView = currentView;
@@ -448,18 +548,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       stmt.free();
       
-      // パーツ一覧のHTML生成
+      // パーツ一覧のHTML生成（ソート対応）
       let partsHtml = `
         <h2>${escapeHtml(categoryName)} のパーツ一覧</h2>
         <div class="table-container">
-          <table class="sortable-table">
+          <table class="sortable-table" id="parts-table">
             <thead>
               <tr>
-                <th>在庫数</th>
-                <th>部品名</th>
-                <th>種別</th>
-                <th>型番</th>
-                <th>外形</th>
+                <th class="sortable">在庫数</th>
+                <th class="sortable">部品名</th>
+                <th class="sortable">種別</th>
+                <th class="sortable">型番</th>
+                <th class="sortable">外形</th>
                 <th>説明</th>
                 ${isLocalEnvironment ? '<th>操作</th>' : ''}
               </tr>
@@ -504,6 +604,12 @@ document.addEventListener('DOMContentLoaded', function() {
       
       partsView.innerHTML = partsHtml;
       
+      // ソート機能を初期化
+      const table = document.getElementById('parts-table');
+      if (table && parts.length > 0) {
+        initTableSort(table);
+      }
+      
       // イベントリスナー設定
       if (isLocalEnvironment) {
         setupRowActionEvents('parts-view');
@@ -517,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // 検索ビュー表示
+  // 検索ビュー表示（修正版 - 見出しを削除）
   function showSearchView() {
     currentView = 'search';
     window.currentView = currentView;
@@ -529,10 +635,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateViewControls();
     
-    // 検索UIを作成
+    // 検索UIを作成（見出しなし）
     if (searchView) {
       searchView.innerHTML = `
-        <h2>全パーツ検索</h2>
         <div class="search-container">
           <input type="text" id="search-input" placeholder="パーツ名、型番、メーカーで検索（空白で全件表示）">
           <button id="search-button">検索</button>
@@ -610,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
         stmt.free();
       }
       
-      // 検索結果のHTML生成
+      // 検索結果のHTML生成（ソート対応）
       let resultsHtml = '';
       
       if (searchTerm.length === 0) {
@@ -621,16 +726,16 @@ document.addEventListener('DOMContentLoaded', function() {
       
       resultsHtml += `
         <div class="table-container">
-          <table class="sortable-table">
+          <table class="sortable-table" id="search-table">
             <thead>
               <tr>
-                <th>在庫数</th>
-                <th>部品名</th>
-                <th>種別</th>
-                <th>型番</th>
-                <th>外形</th>
+                <th class="sortable">在庫数</th>
+                <th class="sortable">部品名</th>
+                <th class="sortable">種別</th>
+                <th class="sortable">型番</th>
+                <th class="sortable">外形</th>
                 <th>説明</th>
-                <th>カテゴリ</th>
+                <th class="sortable">カテゴリ</th>
                 ${isLocalEnvironment ? '<th>操作</th>' : ''}
               </tr>
             </thead>
@@ -684,6 +789,12 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
       
       searchResults.innerHTML = resultsHtml;
+      
+      // ソート機能を初期化
+      const table = document.getElementById('search-table');
+      if (table && results.length > 0) {
+        initTableSort(table);
+      }
       
       // イベントリスナー設定
       if (isLocalEnvironment) {
