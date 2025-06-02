@@ -759,8 +759,34 @@ window.showAddPartDialog = function() {
   }, 100);
 };
 
-// 削除確認ダイアログ（修正版）
+// 削除確認ダイアログ（修正版 - パーツ名の取得を改善）
 window.showDeleteConfirmDialog = function(partId, partName) {
+  console.log('削除確認ダイアログ:', partId, partName);
+  
+  // パーツ名が渡されていない場合は、データベースから取得
+  if (!partName || partName === 'undefined') {
+    try {
+      if (!window.db) {
+        throw new Error('データベースが初期化されていません');
+      }
+      
+      const stmt = window.db.prepare('SELECT name FROM parts WHERE id = ?');
+      stmt.bind([partId]);
+      
+      if (stmt.step()) {
+        const result = stmt.getAsObject();
+        partName = result.name || '不明なパーツ';
+      } else {
+        partName = '不明なパーツ';
+      }
+      stmt.free();
+      
+    } catch (error) {
+      console.error('パーツ名取得エラー:', error);
+      partName = '不明なパーツ';
+    }
+  }
+  
   const content = `
     <div class="modal-header">
       <h2 class="modal-title">パーツの削除</h2>
@@ -770,7 +796,7 @@ window.showDeleteConfirmDialog = function(partId, partName) {
       <div class="confirm-dialog">
         <span class="confirm-icon">⚠️</span>
         <div class="confirm-message">本当に削除しますか？</div>
-        <div class="confirm-details">「${partName}」を削除します。<br>この操作は取り消せません。</div>
+        <div class="confirm-details">「${escapeHtml(partName)}」を削除します。<br>この操作は取り消せません。</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -785,10 +811,12 @@ window.showDeleteConfirmDialog = function(partId, partName) {
   confirmBtn.addEventListener('click', () => {
     try {
       // 削除処理を実行
-      deletePart(partId);
-      closeModal(overlay);
-      if (typeof window.refreshCurrentView === 'function') {
-        window.refreshCurrentView();
+      const success = deletePart(partId);
+      if (success) {
+        closeModal(overlay);
+        if (typeof window.refreshCurrentView === 'function') {
+          window.refreshCurrentView();
+        }
       }
     } catch (error) {
       console.error('削除エラー:', error);
