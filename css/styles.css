@@ -171,9 +171,9 @@ button:hover {
 /* 在庫数列のスタイル（1列目） */
 .sortable-table th:nth-child(1),
 .sortable-table td:nth-child(1) {
-  text-align: right;
-  width: 80px;
-  font-weight: bold;
+  text-align: center;
+  width: 120px;
+  padding: 4px;
 }
 
 /* 部品名列のスタイル（2列目） */
@@ -1005,4 +1005,66 @@ a:hover {
   .dialog-header h3 {
     font-size: 1.1rem;
   }
+}
+
+/* 在庫編集コントロール */
+.stock-editor {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+  min-width: 100px;
+}
+
+.stock-input {
+  width: 50px;
+  padding: 2px 4px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.stock-input.stock-zero {
+  background-color: #ffe6e6;
+  color: #d32f2f;
+}
+
+.stock-input.stock-low {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.stock-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ccc;
+  background-color: #f8f9fa;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.stock-btn:hover {
+  background-color: #e9ecef;
+  border-color: #007cba;
+}
+
+.stock-btn:active {
+  background-color: #dee2e6;
+}
+
+.stock-up {
+  color: #28a745;
+}
+
+.stock-down {
+  color: #dc3545;
 }
