@@ -54,8 +54,9 @@
     <!-- SQL.js ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     
-    <!-- アプリケーションスクリプト（Phase 2まで） -->
-    <script src="js/local-database.js"></script>  <!-- Phase 3で本格実装 -->
+    <!-- アプリケーションスクリプト（正しい順序で読み込み） -->
+    <script src="js/edit-dialogs.js"></script>
+    <script src="js/local-database.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
