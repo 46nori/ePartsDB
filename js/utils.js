@@ -55,8 +55,12 @@ class AppUtils {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
+    // CONFIG が未定義の場合のフォールバック
+    const LOCAL_HOSTS = (typeof CONFIG !== 'undefined' && CONFIG.LOCAL_HOSTS) ? 
+      CONFIG.LOCAL_HOSTS : ['localhost', '127.0.0.1', '', '.local'];
+    
     return (
-      CONFIG.LOCAL_HOSTS.some(host => 
+      LOCAL_HOSTS.some(host => 
         hostname === host || hostname.endsWith(host)
       ) || protocol === 'file:'
     );
@@ -69,13 +73,15 @@ class AppUtils {
    * @returns {string} フォーマット済みHTML
    */
   static formatPartName(name, datasheetUrl) {
-    const partName = this.escapeHtml(name || '');
+    // ❌ 修正前: this.escapeHtml(name || '');
+    // ✅ 修正後: AppUtils.escapeHtml(name || '');
+    const partName = AppUtils.escapeHtml(name || '');
     
     if (datasheetUrl && datasheetUrl.trim() !== '') {
       try {
         const url = new URL(datasheetUrl);
         if (url.protocol === 'https:' || url.protocol === 'http:') {
-          return `<a href="${this.escapeHtml(datasheetUrl)}" target="_blank" rel="noopener noreferrer">${partName}</a>`;
+          return `<a href="${AppUtils.escapeHtml(datasheetUrl)}" target="_blank" rel="noopener noreferrer">${partName}</a>`;
         }
       } catch (e) {
         console.warn('Invalid URL detected:', datasheetUrl);
@@ -96,10 +102,16 @@ class AppUtils {
     const qty = quantity !== null ? quantity : 0;
     let stockClass = '';
     
-    if (qty === CONFIG.THRESHOLDS.STOCK_ZERO) {
-      stockClass = CONFIG.CSS_CLASSES.STOCK_ZERO;
-    } else if (qty < CONFIG.THRESHOLDS.STOCK_LOW) {
-      stockClass = CONFIG.CSS_CLASSES.STOCK_LOW;
+    // CONFIG が未定義の場合のフォールバック
+    const STOCK_ZERO = (typeof CONFIG !== 'undefined' && CONFIG.THRESHOLDS) ? CONFIG.THRESHOLDS.STOCK_ZERO : 0;
+    const STOCK_LOW = (typeof CONFIG !== 'undefined' && CONFIG.THRESHOLDS) ? CONFIG.THRESHOLDS.STOCK_LOW : 5;
+    const STOCK_ZERO_CLASS = (typeof CONFIG !== 'undefined' && CONFIG.CSS_CLASSES) ? CONFIG.CSS_CLASSES.STOCK_ZERO : 'stock-zero';
+    const STOCK_LOW_CLASS = (typeof CONFIG !== 'undefined' && CONFIG.CSS_CLASSES) ? CONFIG.CSS_CLASSES.STOCK_LOW : 'stock-low';
+    
+    if (qty === STOCK_ZERO) {
+      stockClass = STOCK_ZERO_CLASS;
+    } else if (qty < STOCK_LOW) {
+      stockClass = STOCK_LOW_CLASS;
     }
     
     if (isEditable) {
@@ -120,45 +132,32 @@ class AppUtils {
    */
   static formatStockQuantityReadOnly(quantity) {
     const qty = quantity !== null ? quantity : 0;
-    if (qty === CONFIG.THRESHOLDS.STOCK_ZERO) {
-      return `<span class="${CONFIG.CSS_CLASSES.STOCK_ZERO}">${qty}</span>`;
+    
+    // CONFIG が未定義の場合のフォールバック
+    const STOCK_ZERO = (typeof CONFIG !== 'undefined' && CONFIG.THRESHOLDS) ? CONFIG.THRESHOLDS.STOCK_ZERO : 0;
+    const STOCK_LOW = (typeof CONFIG !== 'undefined' && CONFIG.THRESHOLDS) ? CONFIG.THRESHOLDS.STOCK_LOW : 5;
+    const STOCK_ZERO_CLASS = (typeof CONFIG !== 'undefined' && CONFIG.CSS_CLASSES) ? CONFIG.CSS_CLASSES.STOCK_ZERO : 'stock-zero';
+    const STOCK_LOW_CLASS = (typeof CONFIG !== 'undefined' && CONFIG.CSS_CLASSES) ? CONFIG.CSS_CLASSES.STOCK_LOW : 'stock-low';
+    
+    if (qty === STOCK_ZERO) {
+      return `<span class="${STOCK_ZERO_CLASS}">${qty}</span>`;
     }
-    if (qty < CONFIG.THRESHOLDS.STOCK_LOW) {
-      return `<span class="${CONFIG.CSS_CLASSES.STOCK_LOW}">${qty}</span>`;
+    if (qty < STOCK_LOW) {
+      return `<span class="${STOCK_LOW_CLASS}">${qty}</span>`;
     }
     return qty;
   }
   
   /**
-   * 在庫セルのスタイル更新
-   * @param {number} partId - パーツID
-   * @param {number} quantity - 新しい在庫数
-   */
-  static updateStockCellStyle(partId, quantity) {
-    const stockInputs = document.querySelectorAll(`.stock-editor[data-part-id="${partId}"] .stock-input`);
-    
-    stockInputs.forEach(input => {
-      // 既存のクラスを削除
-      input.classList.remove(CONFIG.CSS_CLASSES.STOCK_ZERO, CONFIG.CSS_CLASSES.STOCK_LOW);
-      
-      // 新しいクラスを追加
-      if (quantity === CONFIG.THRESHOLDS.STOCK_ZERO) {
-        input.classList.add(CONFIG.CSS_CLASSES.STOCK_ZERO);
-      } else if (quantity < CONFIG.THRESHOLDS.STOCK_LOW) {
-        input.classList.add(CONFIG.CSS_CLASSES.STOCK_LOW);
-      }
-    });
-  }
-  
-  /**
-   * セル値を取得（ソート用）
-   * @param {HTMLElement} cell - テーブルセル
-   * @param {number} columnIndex - 列インデックス
-   * @returns {string} セルの値
+   * セルの値を安全に取得（テーブルソート用）
+   * @param {HTMLElement} cell - セル要素
+   * @param {number} columnIndex - カラムインデックス
+   * @returns {string} セル値
    */
   static getCellValue(cell, columnIndex) {
-    if (columnIndex === CONFIG.TABLE_COLUMNS.STOCK) {
-      // 在庫数列
+    if (!cell) return '';
+    
+    if (columnIndex === 0) { // 在庫数列
       const input = cell.querySelector('.stock-input');
       if (input) {
         return input.value || '0';
@@ -173,6 +172,31 @@ class AppUtils {
     }
     
     return cell.textContent.trim();
+  }
+
+  /**
+   * 在庫セルのスタイル更新
+   * @param {number} partId - パーツID
+   * @param {number} quantity - 在庫数
+   */
+  static updateStockCellStyle(partId, quantity) {
+    const stockInputs = document.querySelectorAll(`.stock-editor[data-part-id="${partId}"] .stock-input`);
+    
+    stockInputs.forEach(input => {
+      // 既存のクラスを削除
+      input.classList.remove('stock-zero', 'stock-low');
+      
+      // CONFIG が未定義の場合のフォールバック
+      const STOCK_LOW_THRESHOLD = (typeof CONFIG !== 'undefined' && CONFIG.THRESHOLDS) ? 
+        CONFIG.THRESHOLDS.STOCK_LOW : 5;
+      
+      // 新しいクラスを追加
+      if (quantity === 0) {
+        input.classList.add('stock-zero');
+      } else if (quantity < STOCK_LOW_THRESHOLD) {
+        input.classList.add('stock-low');
+      }
+    });
   }
   
   /**
@@ -223,3 +247,5 @@ window.formatStockQuantityEditable = (qty, partId) => AppUtils.formatStockQuanti
 window.formatStockQuantity = AppUtils.formatStockQuantityReadOnly;
 window.getCellValue = AppUtils.getCellValue;
 window.updateStockCellStyle = AppUtils.updateStockCellStyle;
+
+console.log('✅ AppUtils class loaded successfully');

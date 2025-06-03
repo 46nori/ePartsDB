@@ -1,8 +1,44 @@
-/* 電子パーツ在庫ビューア - ローカル編集機能対応版 */
+/* 電子パーツ在庫ビューア - Option 1: 最小限修正版 */
 
 document.addEventListener('DOMContentLoaded', function() {
+
+  // ===== utils.js関数への参照（統一版） =====
+  const formatPartName = AppUtils.formatPartName;
+  const escapeHtml = AppUtils.escapeHtml;
+  const validateInput = AppUtils.validateInput;
+  const formatStockQuantityEditable = (qty, partId) => AppUtils.formatStockQuantity(qty, partId, true);
+  const formatStockQuantity = AppUtils.formatStockQuantityReadOnly;
+  const getCellValue = AppUtils.getCellValue;
+  const updateStockCellStyle = AppUtils.updateStockCellStyle;
+  
+  // ===== 簡素化された状態管理 =====
+  const isLocalEnvironment = AppUtils.checkLocalEnvironment();
+  const getState = () => window.appState;
+  const setState = (updates) => Object.assign(window.appState, updates);
+  const trackChange = (type, data) => {
+    if (window.appState && window.appState.trackChange) {
+      window.appState.trackChange(type, data);
+    }
+    
+    // UI更新
+    updateChangeIndicator();
+    updateSyncButton();
+  };
+  
+  // ===== local-database.js関数への参照（統一版） =====
+  const updateStock = (partId, newQuantity) => {
+    if (typeof window.updateInventory === 'function') {
+      return window.updateInventory(partId, newQuantity);
+    } else {
+      return Promise.reject(new Error('在庫更新機能が利用できません'));
+    }
+  };
+
+  // データベース関連変数
   let db;
   let originalDb; // マスターデータベース
+  
+  // DOM要素への参照
   const statusElement = document.getElementById('status');
   const categoriesView = document.getElementById('categories-view');
   const partsView = document.getElementById('parts-view');
@@ -12,56 +48,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const pageTitle = document.getElementById('page-title');
   
   const DB_URL = './eparts.db';
-  let currentView = 'categories';
-  let currentTab = 'categories';
-  let currentCategoryId = null;
-  let currentCategoryName = '';
-  let currentSortColumn = '';
-  let currentSortDirection = 'asc';
-  
-  // ローカル編集機能の新規変数
-  const isLocalEnvironment = checkLocalEnvironment();
-  let hasLocalChanges = false;
-  let localChanges = {
-    added: [],
-    modified: [],
-    deleted: [],
-    inventory: []
-  };
 
-  console.log('アプリケーション開始 - DOM読み込み完了');
-  console.log('環境:', isLocalEnvironment ? 'ローカル' : 'リモート');
-
-  // 環境判定関数
-  function checkLocalEnvironment() {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    
-    return (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '' ||
-      protocol === 'file:' ||
-      hostname.endsWith('.local')
-    );
-  }
-
-  // 変更追跡関数（グローバルに公開）
-  function trackChange(type, data) {
-    if (!isLocalEnvironment) return;
-    
-    localChanges[type].push(data);
-    hasLocalChanges = true;
-    updateChangeIndicator();
-    updateSyncButton();
-  }
+  console.log('🚀 アプリケーション初期化開始 (Option 1: 最小限修正)');
 
   // 変更インジケーター更新
   function updateChangeIndicator() {
     const indicator = document.getElementById('change-indicator');
     if (!indicator) return;
     
-    const totalChanges = Object.values(localChanges).reduce((sum, arr) => sum + arr.length, 0);
+    const state = getState();
+    if (!state || !state.localChanges) return;
+    
+    const totalChanges = Object.values(state.localChanges).reduce((sum, arr) => sum + arr.length, 0);
     
     if (totalChanges > 0) {
       indicator.textContent = `未保存の変更: ${totalChanges}件`;
@@ -76,8 +74,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const syncBtn = document.getElementById('sync-btn');
     if (!syncBtn) return;
     
-    syncBtn.disabled = !hasLocalChanges;
-    syncBtn.textContent = hasLocalChanges ? '📤 同期' : '📤 同期（変更なし）';
+    const state = getState();
+    if (!state) return;
+    
+    syncBtn.disabled = !state.hasLocalChanges;
+    syncBtn.textContent = state.hasLocalChanges ? '📤 同期' : '📤 同期（変更なし）';
   }
 
   // ダイアログ関数の読み込み待機
@@ -93,12 +94,12 @@ document.addEventListener('DOMContentLoaded', function() {
             typeof window.showEditPartDialog === 'function' &&
             typeof window.showInventoryDialog === 'function' &&
             typeof window.showDeleteConfirmDialog === 'function') {
-          console.log('ダイアログ関数の読み込み完了');
+          console.log('✅ ダイアログ関数の読み込み完了');
           resolve(true);
         } else if (attempts < maxAttempts) {
           setTimeout(checkFunctions, 100);
         } else {
-          console.warn('ダイアログ関数の読み込みタイムアウト');
+          console.warn('⚠️ ダイアログ関数の読み込みタイムアウト');
           resolve(false);
         }
       };
@@ -109,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 環境UI作成
   function createEnvironmentUI() {
-    console.log('環境UI作成開始');
+    console.log('🖥️ UI初期化開始 (簡素化状態管理)');
     const envContainer = document.createElement('div');
     envContainer.className = 'environment-indicator';
     
@@ -137,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ステータス要素の後に挿入
     statusElement.parentNode.insertBefore(envContainer, tabsContainer);
-    console.log('環境UI作成完了');
+    console.log('✅ UI初期化完了');
     
     // ローカル環境のボタンイベント設定（ダイアログ読み込み後）
     if (isLocalEnvironment) {
@@ -145,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (loaded) {
           setupLocalEnvironmentEvents();
         } else {
-          console.error('ダイアログ関数の読み込みに失敗しました');
+          console.error('❌ ダイアログ関数の読み込みに失敗しました');
           setupLocalEnvironmentEventsWithFallback();
         }
       });
@@ -174,7 +175,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (syncBtn) {
         syncBtn.addEventListener('click', () => {
-          if (hasLocalChanges) {
+          const state = getState();
+          if (state && state.hasLocalChanges) {
             if (typeof window.syncToMaster === 'function') {
               window.syncToMaster();
             } else {
@@ -186,7 +188,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (resetBtn) {
         resetBtn.addEventListener('click', () => {
-          if (hasLocalChanges) {
+          const state = getState();
+          if (state && state.hasLocalChanges) {
             if (confirm('未保存の変更が失われます。マスターデータベースに戻しますか？')) {
               resetToMaster();
             }
@@ -195,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
       }
-      console.log('ローカル環境イベント設定完了');
+      console.log('✅ ローカル環境イベント設定完了');
     }, 500);
   }
 
@@ -221,7 +224,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (resetBtn) {
         resetBtn.addEventListener('click', () => {
-          if (hasLocalChanges) {
+          const state = getState();
+          if (state && state.hasLocalChanges) {
             if (confirm('未保存の変更が失われます。マスターデータベースに戻しますか？')) {
               resetToMaster();
             }
@@ -250,17 +254,21 @@ document.addEventListener('DOMContentLoaded', function() {
       // グローバルdbを更新
       window.db = db;
       
-      // 変更履歴をクリア
-      localChanges = { added: [], modified: [], deleted: [], inventory: [] };
-      hasLocalChanges = false;
+      // 状態をリセット
+      setState({
+        hasLocalChanges: false,
+        localChanges: { added: [], modified: [], deleted: [], inventory: [] }
+      });
+      
       updateChangeIndicator();
       updateSyncButton();
       
       // UI再描画
-      if (currentView === 'categories') {
+      const state = getState();
+      if (state.currentView === 'categories') {
         showCategories();
-      } else if (currentView === 'parts' && currentCategoryId) {
-        showPartsByCategory(currentCategoryId, currentCategoryName);
+      } else if (state.currentView === 'parts' && state.currentCategoryId) {
+        showPartsByCategory(state.currentCategoryId, state.currentCategoryName);
       }
       
       statusElement.textContent = 'マスターデータベースに戻しました';
@@ -273,26 +281,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // グローバル変数として公開（local-database.jsから参照）
+  // グローバル変数として公開（後方互換性のため最小限）
   window.trackLocalChange = trackChange;
-  window.currentView = currentView;
-  window.currentCategoryId = currentCategoryId;
-  window.currentCategoryName = currentCategoryName;
+  
+  // 状態管理の統一アクセス（推奨方法）
+  window.getAppState = getState;
+  window.setAppState = setState;
 
   // UI更新関数をグローバルに公開
   window.refreshCurrentView = function() {
-    if (currentView === 'categories') {
+    const state = getState();
+    if (!state) return;
+    
+    if (state.currentView === 'categories') {
       showCategories();
-    } else if (currentView === 'parts' && currentCategoryId) {
-      showPartsByCategory(currentCategoryId, currentCategoryName);
-    } else if (currentView === 'search') {
+    } else if (state.currentView === 'parts' && state.currentCategoryId) {
+      showPartsByCategory(state.currentCategoryId, state.currentCategoryName);
+    } else if (state.currentView === 'search') {
       doSearch();
     }
   };
 
-  // タブ設定（修正版 - 初期状態の改善）
+  // タブ設定（簡素化版）
   function setupTabs() {
-    console.log('タブ設定開始');
+    console.log('📑 タブ設定開始 (簡素化状態管理)');
     const categoriesTab = document.getElementById('categories-tab');
     const searchTab = document.getElementById('search-tab');
     
@@ -310,13 +322,17 @@ document.addEventListener('DOMContentLoaded', function() {
         switchTab('search');
       });
     }
-    console.log('タブ設定完了');
+    console.log('✅ タブ設定完了');
   }
 
-  // タブ切り替え（修正版 - アクティブ状態の明確化）
+  // タブ切り替え（簡素化版）
   function switchTab(tabName) {
-    console.log('タブ切り替え:', tabName);
-    currentTab = tabName;
+    console.log('🔄 タブ切り替え:', tabName);
+    
+    // 状態更新
+    setState({
+      currentTab: tabName
+    });
     
     // すべてのタブからアクティブ状態を削除
     document.querySelectorAll('.tab').forEach(tab => {
@@ -327,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const activeTab = document.getElementById(`${tabName}-tab`);
     if (activeTab) {
       activeTab.classList.add('active');
-      console.log('アクティブタブ設定:', tabName);
+      console.log('✅ タブ切り替え完了:', tabName);
     }
     
     // ビューを切り替え
@@ -338,11 +354,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // カテゴリ表示
+  // カテゴリ表示（簡素化版）
   function showCategories() {
-    console.log('カテゴリ表示開始');
-    currentView = 'categories';
-    window.currentView = currentView;
+    console.log('📂 カテゴリ一覧表示開始');
+    
+    // 状態更新
+    setState({
+      currentView: 'categories'
+    });
     
     // ビューの表示/非表示
     categoriesView.style.display = 'block';
@@ -360,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       stmt.free();
       
-      console.log('カテゴリ取得完了:', categories.length, '件');
+      console.log('✅ カテゴリ表示完了:', categories.length, '件');
       
       const categoryContainer = categoriesView.querySelector('.category-container');
       if (categoryContainer) {
@@ -372,13 +391,13 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
     } catch (error) {
-      console.error('カテゴリ表示エラー:', error);
+      console.error('❌ カテゴリ表示エラー:', error);
       statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
     }
   }
 
-  // カテゴリ選択
+  // カテゴリ選択（簡素化版）
   function selectCategory(categoryId, categoryName) {
     const validId = validateInput(categoryId, 'number');
     const validName = validateInput(categoryName, 'string', 100);
@@ -388,43 +407,16 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
-    currentCategoryId = validId;
-    currentCategoryName = validName;
-    
-    // グローバル変数を更新
-    window.currentCategoryId = validId;
-    window.currentCategoryName = validName;
+    // 状態更新
+    setState({
+      currentCategoryId: validId,
+      currentCategoryName: validName
+    });
     
     showPartsByCategory(validId, validName);
   }
 
-  // 在庫数セルのフォーマット（修正版 - +/-ボタンを削除）
-  function formatStockQuantityEditable(quantity, partId) {
-    const qty = quantity !== null ? quantity : 0;
-    let stockClass = '';
-    if (qty === 0) stockClass = 'stock-zero';
-    else if (qty < 5) stockClass = 'stock-low';
-    
-    if (isLocalEnvironment) {
-      return `
-        <div class="stock-editor" data-part-id="${partId}">
-          <input type="number" class="stock-input ${stockClass}" value="${qty}" min="0" max="9999" step="1">
-        </div>
-      `;
-    } else {
-      return `<span class="${stockClass}">${qty}</span>`;
-    }
-  }
-
-  // 在庫数セルのフォーマット（読み取り専用版）
-  function formatStockQuantity(quantity) {
-    const qty = quantity !== null ? quantity : 0;
-    if (qty === 0) return `<span class="stock-zero">${qty}</span>`;
-    if (qty < 5) return `<span class="stock-low">${qty}</span>`;
-    return qty;
-  }
-
-  // テーブルソート機能（修正版 - sort-iconを削除）
+  // テーブルソート機能
   function initTableSort(tableElement) {
     const headers = tableElement.querySelectorAll('th');
     
@@ -435,15 +427,13 @@ document.addEventListener('DOMContentLoaded', function() {
       header.style.cursor = 'pointer';
       header.classList.add('sortable');
       
-      // sort-iconは追加しない（CSSの::beforeで制御）
-      
       header.addEventListener('click', () => {
         sortTable(tableElement, index, header);
       });
     });
   }
 
-  // テーブルソート実行（修正版 - sort-iconの操作を削除）
+  // テーブルソート実行
   function sortTable(table, columnIndex, headerElement) {
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -465,13 +455,11 @@ document.addEventListener('DOMContentLoaded', function() {
     table.querySelectorAll('th').forEach(th => {
       th.dataset.sort = 'none';
       th.classList.remove('sort-asc', 'sort-desc');
-      // sort-iconの操作は不要（CSSで制御）
     });
     
     // 現在のヘッダーにソート状態を設定
     headerElement.dataset.sort = newSort;
     headerElement.classList.add(`sort-${newSort}`);
-    // sort-iconの操作は不要（CSSで制御）
     
     // ソート実行
     rows.sort((a, b) => {
@@ -499,29 +487,14 @@ document.addEventListener('DOMContentLoaded', function() {
     rows.forEach(row => tbody.appendChild(row));
   }
 
-  // セル値を取得（在庫編集コントロールやリンクを考慮）
-  function getCellValue(cell, columnIndex) {
-    if (columnIndex === 0) { // 在庫数列
-      const input = cell.querySelector('.stock-input');
-      if (input) {
-        return input.value || '0';
-      }
-      return cell.textContent.trim();
-    }
-    
-    // リンクがある場合はテキストのみ取得
-    const link = cell.querySelector('a');
-    if (link) {
-      return link.textContent.trim();
-    }
-    
-    return cell.textContent.trim();
-  }
-
-  // パーツ一覧表示（修正版 - ソート機能追加）
+  // パーツ一覧表示（簡素化版）
   function showPartsByCategory(categoryId, categoryName) {
-    currentView = 'parts';
-    window.currentView = currentView;
+    console.log('🔧 パーツ一覧表示開始:', categoryName);
+    
+    // 状態更新
+    setState({
+      currentView: 'parts'
+    });
     
     // ビューの表示/非表示
     categoriesView.style.display = 'none';
@@ -548,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       stmt.free();
       
-      // パーツ一覧のHTML生成（ソート対応）
+      // パーツ一覧のHTML生成
       let partsHtml = `
         <h2>${escapeHtml(categoryName)} のパーツ一覧</h2>
         <div class="table-container">
@@ -603,6 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
       
       partsView.innerHTML = partsHtml;
+      console.log('✅ パーツ一覧表示完了:', parts.length, '件');
       
       // ソート機能を初期化
       const table = document.getElementById('parts-table');
@@ -617,16 +591,20 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
     } catch (error) {
-      console.error('パーツ表示エラー:', error);
+      console.error('❌ パーツ表示エラー:', error);
       statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
     }
   }
 
-  // 検索ビュー表示（修正版 - 見出しを削除）
+  // 検索ビュー表示（簡素化版）
   function showSearchView() {
-    currentView = 'search';
-    window.currentView = currentView;
+    console.log('🔍 検索ビュー表示開始');
+    
+    // 状態更新
+    setState({
+      currentView: 'search'
+    });
     
     // ビューの表示/非表示
     categoriesView.style.display = 'none';
@@ -635,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateViewControls();
     
-    // 検索UIを作成（見出しなし）
+    // 検索UIを作成
     if (searchView) {
       searchView.innerHTML = `
         <div class="search-container">
@@ -662,6 +640,8 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
       }
+      
+      console.log('✅ 検索ビュー表示完了');
     }
   }
 
@@ -673,6 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!searchInput || !searchResults) return;
     
     const searchTerm = validateInput(searchInput.value, 'search', 100);
+    console.log('🔍 検索実行:', `"${searchTerm}"`);
     
     try {
       let sql, stmt, results = [];
@@ -695,7 +676,7 @@ document.addEventListener('DOMContentLoaded', function() {
         stmt.free();
         
       } else {
-        // 検索ワードがある場合は部分一致検索（1文字以上で検索可能）
+        // 検索ワードがある場合は部分一致検索
         sql = `
           SELECT parts.*, categories.name AS category_name, inventory.quantity
           FROM parts
@@ -715,106 +696,142 @@ document.addEventListener('DOMContentLoaded', function() {
         stmt.free();
       }
       
-      // 検索結果のHTML生成（ソート対応）
-      let resultsHtml = '';
+      displaySearchResults(searchResults, results, searchTerm);
+      console.log('✅ 検索完了:', `"${searchTerm}"`, '->', results.length, '件');
       
+    } catch (error) {
+      console.error('❌ 検索結果表示エラー:', error);
+      searchResults.innerHTML = `<p class="error">検索中にエラーが発生しました: ${error.message}</p>`;
+    }
+  }
+
+  // 検索結果表示
+  function displaySearchResults(container, results, searchTerm) {
+    try {
+      const tableHtml = generateTable(results, 'global', container.id);
+      
+      let resultsHtml = '';
       if (searchTerm.length === 0) {
         resultsHtml += `<h3>全パーツ一覧: ${results.length}件</h3>`;
       } else {
         resultsHtml += `<h3>「${escapeHtml(searchTerm)}」の検索結果: ${results.length}件</h3>`;
       }
       
-      resultsHtml += `
-        <div class="table-container">
-          <table class="sortable-table" id="search-table">
-            <thead>
-              <tr>
-                <th class="sortable">在庫数</th>
-                <th class="sortable">部品名</th>
-                <th class="sortable">種別</th>
-                <th class="sortable">型番</th>
-                <th class="sortable">外形</th>
-                <th>説明</th>
-                <th class="sortable">カテゴリ</th>
-                ${isLocalEnvironment ? '<th>操作</th>' : ''}
-              </tr>
-            </thead>
-            <tbody>
-      `;
-      
-      if (results.length === 0) {
-        if (searchTerm.length === 0) {
-          resultsHtml += `
-            <tr>
-              <td colspan="${isLocalEnvironment ? '8' : '7'}" style="text-align: center; padding: 20px; color: #6c757d;">
-                データベースにパーツが登録されていません
-              </td>
-            </tr>
-          `;
-        } else {
-          resultsHtml += `
-            <tr>
-              <td colspan="${isLocalEnvironment ? '8' : '7'}" style="text-align: center; padding: 20px; color: #6c757d;">
-                「${escapeHtml(searchTerm)}」に一致するパーツが見つかりませんでした
-              </td>
-            </tr>
-          `;
-        }
-      } else {
-        results.forEach(part => {
-          resultsHtml += `
-            <tr>
-              <td>${formatStockQuantityEditable(part.quantity, part.id)}</td>
-              <td>${formatPartName(part.name, part.datasheet_url)}</td>
-              <td>${escapeHtml(part.logic_family || '')}</td>
-              <td>${escapeHtml(part.part_number || '')}</td>
-              <td>${escapeHtml(part.package || '')}</td>
-              <td>${escapeHtml(part.description || '')}</td>
-              <td><a href="#" class="category-link" onclick="selectCategory(${part.category_id}, '${escapeHtml(part.category_name)}')">${escapeHtml(part.category_name || '')}</a></td>
-              ${isLocalEnvironment ? `
-                <td class="actions">
-                  <button class="btn-edit" data-part-id="${part.id}" title="編集">✏️</button>
-                  <button class="btn-delete" data-part-id="${part.id}" title="削除">🗑️</button>
-                </td>
-              ` : ''}
-            </tr>
-          `;
-        });
-      }
-      
-      resultsHtml += `
-            </tbody>
-          </table>
-        </div>
-      `;
-      
-      searchResults.innerHTML = resultsHtml;
+      resultsHtml += tableHtml;
+      container.innerHTML = resultsHtml;
       
       // ソート機能を初期化
-      const table = document.getElementById('search-table');
+      const table = container.querySelector('.sortable-table');
       if (table && results.length > 0) {
         initTableSort(table);
       }
       
       // イベントリスナー設定
       if (isLocalEnvironment) {
-        setupRowActionEvents('search-results');
-        setupStockEditorEvents('search-results');
+        setupRowActionEvents(container.id);
+        setupStockEditorEvents(container.id);
       }
       
     } catch (error) {
-      console.error('検索エラー:', error);
-      searchResults.innerHTML = `<p class="error">検索中にエラーが発生しました: ${error.message}</p>`;
+      console.error('❌ 検索結果表示エラー:', error);
+      container.innerHTML = `<p class="error">検索結果の表示中にエラーが発生しました: ${error.message}</p>`;
     }
+  }
+
+  // テーブル生成
+  function generateTable(data, type, containerId) {
+    const isGlobal = type === 'global';
+    
+    let html = `
+      <div class="table-container">
+        <table class="sortable-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-column="0">在庫数</th>
+              <th class="sortable" data-column="1">部品名</th>
+              <th class="sortable" data-column="2">種別</th>
+              <th class="sortable" data-column="3">型番</th>
+              <th class="sortable" data-column="4">外形</th>
+              <th data-column="5">説明</th>
+              ${isGlobal ? '<th data-column="6">カテゴリ</th>' : '<th data-column="6">メーカー</th>'}
+              ${isLocalEnvironment ? '<th>操作</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    if (data.length === 0) {
+      html += `
+        <tr>
+          <td colspan="${isGlobal ? (isLocalEnvironment ? '8' : '7') : (isLocalEnvironment ? '8' : '7')}" style="text-align: center; padding: 20px; color: #6c757d;">
+            データが見つかりませんでした
+          </td>
+        </tr>
+      `;
+    } else {
+      data.forEach(row => {
+        const quantity = formatStockQuantityEditable(row.quantity, row.id);
+        const partName = formatPartName(row.name, row.datasheet_url);
+        const logicFamily = escapeHtml(row.logic_family || '');
+        const partNumber = escapeHtml(row.part_number || '');
+        const packageType = escapeHtml(row.package || '');
+        const description = escapeHtml(row.description || '');
+
+        let lastColumn;
+        if (isGlobal) {
+          const categoryId = validateInput(row.category_id, 'number') || 0;
+          const categoryName = escapeHtml(row.category_name || '未分類');
+          lastColumn = `
+            <td>
+              <a href="#" class="category-link" onclick="selectCategory(${categoryId}, '${escapeHtml(categoryName)}')">
+                ${categoryName}
+              </a>
+            </td>
+          `;
+        } else {
+          const manufacturer = escapeHtml(row.manufacturer || '');
+          lastColumn = `<td>${manufacturer}</td>`;
+        }
+
+        const actionColumn = isLocalEnvironment ? `
+          <td class="actions">
+            <button class="btn-edit" data-part-id="${row.id}" title="編集">✏️</button>
+            <button class="btn-delete" data-part-id="${row.id}" title="削除">🗑️</button>
+          </td>
+        ` : '';
+
+        html += `
+          <tr>
+            <td style="text-align: right;">${quantity}</td>
+            <td>${partName}</td>
+            <td>${logicFamily}</td>
+            <td>${partNumber}</td>
+            <td>${packageType}</td>
+            <td>${description}</td>
+            ${lastColumn}
+            ${actionColumn}
+          </tr>
+        `;
+      });
+    }
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    return html;
   }
 
   // ビューコントロール更新
   function updateViewControls() {
-    window.currentView = currentView; // グローバル変数を更新
+    const state = getState();
+    if (!state) return;
     
-    if (currentView === 'categories' || currentView === 'search') {
+    if (state.currentView === 'categories' || state.currentView === 'search') {
       viewControls.innerHTML = '';
-    } else if (currentView === 'parts') {
+    } else if (state.currentView === 'parts') {
       viewControls.innerHTML = `
         <button id="backButton" class="back-button">← カテゴリ一覧に戻る</button>
       `;
@@ -826,7 +843,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // 在庫編集イベント設定（修正版 - +/-ボタンのイベントを削除）
+  // 在庫編集イベント設定
   function setupStockEditorEvents(containerId) {
     if (!isLocalEnvironment) return;
     
@@ -838,13 +855,13 @@ document.addEventListener('DOMContentLoaded', function() {
       input.addEventListener('change', (e) => {
         const partId = parseInt(e.target.closest('.stock-editor').dataset.partId, 10);
         const newQuantity = parseInt(e.target.value, 10) || 0;
-        updateStock(partId, newQuantity);
+        updateStockFromInput(partId, newQuantity, e.target);
       });
       
       input.addEventListener('blur', (e) => {
         const partId = parseInt(e.target.closest('.stock-editor').dataset.partId, 10);
         const newQuantity = parseInt(e.target.value, 10) || 0;
-        updateStock(partId, newQuantity);
+        updateStockFromInput(partId, newQuantity, e.target);
       });
       
       // Enterキーでの更新
@@ -852,71 +869,35 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Enter') {
           const partId = parseInt(e.target.closest('.stock-editor').dataset.partId, 10);
           const newQuantity = parseInt(e.target.value, 10) || 0;
-          updateStock(partId, newQuantity);
+          updateStockFromInput(partId, newQuantity, e.target);
           e.target.blur(); // フォーカスを外す
         }
       });
     });
   }
 
-  // 在庫更新関数
-  function updateStock(partId, newQuantity) {
+  // 在庫更新（local-database.js使用）
+  function updateStockFromInput(partId, newQuantity, inputElement) {
     if (!isLocalEnvironment || !db) return;
     
-    try {
-      // 現在の在庫レコードを確認
-      const checkStmt = db.prepare('SELECT * FROM inventory WHERE part_id = ?');
-      checkStmt.bind([partId]);
-      const exists = checkStmt.step();
-      checkStmt.free();
-      
-      let stmt;
-      if (exists) {
-        // 更新
-        stmt = db.prepare('UPDATE inventory SET quantity = ? WHERE part_id = ?');
-        stmt.bind([newQuantity, partId]);
-      } else {
-        // 新規作成
-        stmt = db.prepare('INSERT INTO inventory (part_id, quantity) VALUES (?, ?)');
-        stmt.bind([partId, newQuantity]);
-      }
-      
-      stmt.step();
-      stmt.free();
-      
-      // 変更追跡
-      trackChange('inventory', {
-        part_id: partId,
-        quantity: newQuantity,
-        timestamp: new Date().toISOString()
+    updateStock(partId, newQuantity)
+      .then(() => {
+        // 在庫数セルの色を更新
+        updateStockCellStyle(partId, newQuantity);
+        console.log(`✅ 在庫更新成功: パーツID ${partId} → ${newQuantity}`);
+      })
+      .catch(error => {
+        console.error('❌ 在庫更新エラー:', error);
+        // 入力値を元に戻す
+        const currentQtyStmt = db.prepare('SELECT quantity FROM inventory WHERE part_id = ?');
+        currentQtyStmt.bind([partId]);
+        if (currentQtyStmt.step()) {
+          const currentQty = currentQtyStmt.get()[0] || 0;
+          inputElement.value = currentQty;
+        }
+        currentQtyStmt.free();
+        alert(`在庫の更新に失敗しました: ${error.message}`);
       });
-      
-      // 在庫数セルの色を更新
-      updateStockCellStyle(partId, newQuantity);
-      
-      console.log(`在庫更新: パーツID ${partId} → ${newQuantity}`);
-      
-    } catch (error) {
-      console.error('在庫更新エラー:', error);
-      alert(`在庫の更新に失敗しました: ${error.message}`);
-    }
-  }
-
-  // 在庫セルのスタイル更新
-  function updateStockCellStyle(partId, quantity) {
-    const stockInputs = document.querySelectorAll(`.stock-editor[data-part-id="${partId}"] .stock-input`);
-    
-    stockInputs.forEach(input => {
-      // 既存のクラスを削除
-      input.classList.remove('stock-zero', 'stock-low');
-      
-      // 新しいクラスを追加
-      if (quantity === 0) {
-        input.classList.add('stock-zero');
-      } else if (quantity < 5) {
-        input.classList.add('stock-low');
-      }
-    });
   }
 
   // 行アクションボタンのイベント設定
@@ -961,78 +942,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ユーティリティ関数
-  function formatPartName(name, datasheetUrl) {
-    const partName = escapeHtml(name || '');
-    
-    if (datasheetUrl && datasheetUrl.trim() !== '') {
-      try {
-        const url = new URL(datasheetUrl);
-        if (url.protocol === 'https:' || url.protocol === 'http:') {
-          return `<a href="${escapeHtml(datasheetUrl)}" target="_blank" rel="noopener noreferrer">${partName}</a>`;
-        }
-      } catch (e) {
-        console.warn('Invalid URL detected:', datasheetUrl);
-      }
-    }
-    
-    return partName;
-  }
-
-  function escapeHtml(unsafe) {
-    if (unsafe === null || unsafe === undefined) return '';
-    return String(unsafe)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;")
-      .replace(/\//g, "&#x2F;")
-      .replace(/`/g, "&#x60;")
-      .replace(/=/g, "&#x3D;");
-  }
-  
-  function validateInput(input, type = 'string', maxLength = 255) {
-    if (input === null || input === undefined) {
-      return '';
-    }
-    
-    const str = String(input).trim();
-    
-    switch (type) {
-      case 'number':
-        const num = parseInt(str, 10);
-        return isNaN(num) ? 0 : Math.max(0, num);
-      case 'string':
-        return str.substring(0, maxLength);
-      case 'search':
-        return str.substring(0, maxLength).replace(/[<>\"'&;()]/g, '');
-      default:
-        return str.substring(0, maxLength);
-    }
-  }
-
   // グローバル関数として公開
   window.selectCategory = selectCategory;
 
   // データベース初期化
   function initDb() {
-    console.log('データベース初期化開始');
+    console.log('🔄 データベース初期化開始 (Option 1)');
     statusElement.textContent = 'SQL.jsライブラリを読み込み中...';
     
     if (typeof initSqlJs === 'undefined') {
-      console.error('initSqlJs未定義');
+      console.error('❌ initSqlJs未定義');
       statusElement.textContent = 'エラー: SQL.jsライブラリが読み込まれていません';
       statusElement.className = 'status error';
       return;
     }
     
-    console.log('SQL.js初期化開始');
     initSqlJs({
       locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
     })
     .then(SQL => {
-      console.log('SQL.js読み込み完了:', typeof SQL);
       statusElement.textContent = 'データベースファイルをダウンロード中...';
       
       if (!SQL || typeof SQL.Database !== 'function') {
@@ -1040,12 +968,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       window.SQLInstance = SQL;
-      console.log('データベースファイル取得開始:', DB_URL);
-      
       return fetch(DB_URL);
     })
     .then(response => {
-      console.log('データベースファイル取得:', response.status);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} - データベースファイルが見つかりませんでした`);
       }
@@ -1054,57 +979,41 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(buffer => {
       console.log('データベースバッファ取得完了:', buffer.byteLength, 'bytes');
       
-      if (!window.SQLInstance) {
-        throw new Error('SQLインスタンスが利用できません');
-      }
-      
       // マスターデータベース作成
-      console.log('マスターデータベース作成開始');
       originalDb = new window.SQLInstance.Database(new Uint8Array(buffer));
-      console.log('マスターデータベース作成完了');
       
       // 作業用データベース作成
       if (isLocalEnvironment) {
-        console.log('ローカル環境: 作業用データベースを作成');
+        console.log('✅ Database loaded (editable mode)');
         const workingData = originalDb.export();
         db = new window.SQLInstance.Database(workingData);
       } else {
-        console.log('リモート環境: 読み取り専用データベース');
+        console.log('Database loaded (read-only mode)');
         db = originalDb;
       }
       
-      // グローバルにdbを公開（重要！）
+      // グローバルにdbを公開
       window.db = db;
-      console.log('window.dbを設定完了');
       
-      // 基本的なテストクエリを実行
-      console.log('テストクエリ実行');
-      const testStmt = db.prepare('SELECT name FROM sqlite_master WHERE type="table" LIMIT 1');
-      const hasTable = testStmt.step();
+      // テストクエリ実行
+      const testStmt = db.prepare('SELECT COUNT(*) as count FROM categories');
+      testStmt.step();
+      const categoryCount = testStmt.get()[0];
       testStmt.free();
       
-      if (!hasTable) {
-        throw new Error('データベースにテーブルが見つかりません');
-      }
+      console.log('✅ データベース接続OK - カテゴリ数:', categoryCount);
       
-      console.log('テストクエリ成功');
       return db;
     })
     .then(() => {
-      console.log('データベース初期化完了');
+      console.log('🎉 データベース準備完了 (Option 1)');
       console.log('環境:', isLocalEnvironment ? 'ローカル（編集可能）' : 'リモート（読み取り専用）');
-      console.log('window.db:', typeof window.db);
       
       statusElement.textContent = 'データベースの読み込みが完了しました。';
       statusElement.className = 'status';
       
       // 環境UIを作成
-      try {
-        createEnvironmentUI();
-      } catch (error) {
-        console.error('環境UI作成エラー:', error);
-        statusElement.textContent = 'データベースは読み込まれましたが、UIの初期化でエラーが発生しました。';
-      }
+      createEnvironmentUI();
       
       console.log('タブコンテナ表示');
       tabsContainer.style.display = 'block';
@@ -1112,21 +1021,39 @@ document.addEventListener('DOMContentLoaded', function() {
       showCategories();
     })
     .catch(error => {
-      console.error('データベース初期化エラー:', error);
+      console.error('❌ データベース初期化エラー:', error);
       statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
-      
-      console.error('エラー詳細:', {
-        error: error,
-        initSqlJs: typeof initSqlJs,
-        SQLInstance: typeof window.SQLInstance,
-        isLocal: isLocalEnvironment
-      });
     });
   }
 
-  // アプリケーション開始
-  console.log('初期化開始');
-  initDb();
+  // アプリケーション開始（簡素化版）
+  console.log('🚀 初期化開始 (Option 1)');
+  
+  // window.appStateが利用可能になってからDB初期化
+  if (window.appState) {
+    console.log('✅ AppState利用可能 - 直接初期化');
+    initDb();
+  } else {
+    console.log('⚠️ AppState待機中...');
+    // app-state.jsの読み込み待機
+    let attempts = 0;
+    const maxAttempts = 50;
+    const checkAppState = () => {
+      attempts++;
+      if (window.appState) {
+        console.log('✅ AppState読み込み完了');
+        initDb();
+      } else if (attempts < maxAttempts) {
+        setTimeout(checkAppState, 100);
+      } else {
+        console.warn('⚠️ AppState読み込みタイムアウト - 初期化を続行');
+        initDb();
+      }
+    };
+    setTimeout(checkAppState, 100);
+  }
 
 }); // DOMContentLoaded終了
+
+console.log('✅ ePartsDB app.js loaded successfully (Option 1: 最小限修正)');

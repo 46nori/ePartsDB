@@ -214,7 +214,7 @@ window.deletePart = function(partId) {
   });
 };
 
-// 在庫更新
+// 在庫更新関数（修正版）
 window.updateInventory = function(partId, newQuantity) {
   return new Promise((resolve, reject) => {
     try {
@@ -223,46 +223,78 @@ window.updateInventory = function(partId, newQuantity) {
         return;
       }
 
-      // パーツ名を取得（ログ用）
-      const getPartStmt = window.db.prepare('SELECT name FROM parts WHERE id = ?');
-      getPartStmt.bind([partId]);
-      let partName = 'Unknown';
-      if (getPartStmt.step()) {
-        partName = getPartStmt.get()[0];
+      // パーツ名を取得（エラーメッセージ用）
+      let partName = `パーツID ${partId}`;
+      try {
+        const nameStmt = window.db.prepare('SELECT name FROM parts WHERE id = ?');
+        nameStmt.bind([partId]);
+        if (nameStmt.step()) {
+          partName = nameStmt.get()[0] || partName;
+        }
+        nameStmt.free();
+      } catch (error) {
+        console.warn('パーツ名取得エラー:', error);
       }
-      getPartStmt.free();
+
+      // 修正版: 明示的な存在チェックとUPSERT処理
+      const checkSql = 'SELECT COUNT(*) as count FROM inventory WHERE part_id = ?';
+      const checkStmt = window.db.prepare(checkSql);
+      checkStmt.bind([partId]);
+      checkStmt.step();
+      const exists = checkStmt.get()[0] > 0;
+      checkStmt.free();
+
+      let stmt;
+      if (exists) {
+        // 既存レコードの更新
+        const updateSql = 'UPDATE inventory SET quantity = ? WHERE part_id = ?';
+        stmt = window.db.prepare(updateSql);
+        stmt.bind([newQuantity, partId]);
+      } else {
+        // 新規レコードの挿入
+        const insertSql = 'INSERT INTO inventory (part_id, quantity) VALUES (?, ?)';
+        stmt = window.db.prepare(insertSql);
+        stmt.bind([partId, newQuantity]);
+      }
       
-      // 在庫更新または挿入
-      const upsertSql = `
-        INSERT INTO inventory (part_id, quantity) 
-        VALUES (?, ?) 
-        ON CONFLICT(part_id) DO UPDATE SET quantity = excluded.quantity
-      `;
-      
-      const stmt = window.db.prepare(upsertSql);
-      stmt.run([partId, newQuantity]);
+      stmt.run();
       stmt.free();
+      
+      console.log(`✅ 在庫更新成功: ${partName} → ${newQuantity}個`);
       
       // 変更を追跡
       if (typeof window.trackLocalChange === 'function') {
-        window.trackLocalChange('inventory', { id: partId, name: partName, quantity: newQuantity });
+        window.trackLocalChange('inventory', { 
+          id: partId, 
+          name: partName, 
+          quantity: newQuantity,
+          action: exists ? 'updated' : 'inserted'
+        });
       }
       
       // UI更新
-      refreshCurrentView();
+      if (typeof window.refreshCurrentView === 'function') {
+        window.refreshCurrentView();
+      }
       
       // ステータス更新
       const statusElement = document.getElementById('status');
       if (statusElement) {
         statusElement.textContent = `「${partName}」の在庫を${newQuantity}個に更新しました`;
         statusElement.className = 'status';
+        
+        // 3秒後にステータスをクリア
+        setTimeout(() => {
+          if (statusElement.textContent.includes(partName)) {
+            statusElement.textContent = 'データベースの読み込みが完了しました。';
+          }
+        }, 3000);
       }
       
-      console.log('在庫更新完了:', { id: partId, name: partName, quantity: newQuantity });
       resolve();
       
     } catch (error) {
-      console.error('在庫更新エラー:', error);
+      console.error('❌ 在庫更新エラー:', error);
       reject(new Error(`在庫の更新に失敗しました: ${error.message}`));
     }
   });
