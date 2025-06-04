@@ -3,6 +3,7 @@ CREATE TABLE categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     parent_id INTEGER,
+    display_order INTEGER DEFAULT 1000,        -- 表示順序（小さい値が先に表示）
     FOREIGN KEY (parent_id) REFERENCES categories(id)
 );
 

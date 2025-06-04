@@ -371,7 +371,8 @@ document.addEventListener('DOMContentLoaded', function() {
     updateViewControls();
     
     try {
-      const stmt = db.prepare('SELECT id, name FROM categories ORDER BY name ASC');
+      // 修正: display_order昇順でソート
+      const stmt = db.prepare('SELECT id, name FROM categories ORDER BY display_order ASC, name ASC');
       const categories = [];
       
       while (stmt.step()) {
