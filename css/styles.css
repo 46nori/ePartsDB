@@ -275,6 +275,47 @@ h3 {
   color: #007bff;
 }
 
+/* カテゴリボタンの色分け（display_order範囲別） */
+.category-card[data-order-range="0"] {
+  background-color: #f8f9fa; /* 0-99: ライトグレー */
+}
+
+.category-card[data-order-range="1"] {
+  background-color: #fff3cd; /* 100-199: ライトイエロー */
+}
+
+.category-card[data-order-range="2"] {
+  background-color: #d1ecf1; /* 200-299: ライトブルー */
+}
+
+.category-card[data-order-range="3"] {
+  background-color: #d4edda; /* 300-399: ライトグリーン */
+}
+
+.category-card[data-order-range="4"] {
+  background-color: #f8d7da; /* 400-499: ライトピンク */
+}
+
+.category-card[data-order-range="5"] {
+  background-color: #e2e3e5; /* 500-599: ライトグレー2 */
+}
+
+.category-card[data-order-range="6"] {
+  background-color: #fff3e0; /* 600-699: ライトオレンジ */
+}
+
+.category-card[data-order-range="7"] {
+  background-color: #e8f5e8; /* 700-799: ライトミント */
+}
+
+.category-card[data-order-range="8"] {
+  background-color: #e1f5fe; /* 800-899: ライトシアン */
+}
+
+.category-card[data-order-range="9"] {
+  background-color: #fce4ec; /* 900-999: ライトローズ */
+}
+
 /* ===== テーブル ===== */
 .table-container {
   overflow-x: auto;

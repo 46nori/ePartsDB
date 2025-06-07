@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // カテゴリ表示（簡素化版）
+  // カテゴリ表示
   function showCategories() {
     console.log('📂 カテゴリ一覧表示開始');
     
@@ -371,8 +371,8 @@ document.addEventListener('DOMContentLoaded', function() {
     updateViewControls();
     
     try {
-      // 修正: display_order昇順でソート
-      const stmt = db.prepare('SELECT id, name FROM categories ORDER BY display_order ASC, name ASC');
+      // display_order昇順でソート、display_orderフィールドも取得
+      const stmt = db.prepare('SELECT id, name, display_order FROM categories ORDER BY display_order ASC, name ASC');
       const categories = [];
       
       while (stmt.step()) {
@@ -384,11 +384,17 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const categoryContainer = categoriesView.querySelector('.category-container');
       if (categoryContainer) {
-        categoryContainer.innerHTML = categories.map(category => `
-          <div class="category-card" onclick="selectCategory(${category.id}, '${escapeHtml(category.name)}')">
-            <h3>${escapeHtml(category.name)}</h3>
-          </div>
-        `).join('');
+        categoryContainer.innerHTML = categories.map(category => {
+          // display_orderから色範囲を計算（100ごと）
+          const orderRange = Math.floor((category.display_order || 1000) / 100);
+          const clampedRange = Math.min(orderRange, 9); // 最大9に制限（0-9の10段階）
+          
+          return `
+            <div class="category-card" data-order-range="${clampedRange}" onclick="selectCategory(${category.id}, '${escapeHtml(category.name)}')">
+              <h3>${escapeHtml(category.name)}</h3>
+            </div>
+          `;
+        }).join('');
       }
       
     } catch (error) {
