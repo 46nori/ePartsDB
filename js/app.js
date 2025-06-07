@@ -12,7 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const updateStockCellStyle = AppUtils.updateStockCellStyle;
   
   // ===== 簡素化された状態管理 =====
-  const isLocalEnvironment = AppUtils.checkLocalEnvironment();
+  const isLocalEnvironment = (() => {
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.');
+  })();
   const getState = () => window.appState;
   const setState = (updates) => Object.assign(window.appState, updates);
   const trackChange = (type, data) => {
