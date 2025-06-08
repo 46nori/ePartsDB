@@ -336,4 +336,160 @@ window.getPartById = function(partId) {
   });
 };
 
+// ✅ 新規追加: 完全スキーマ対応のパーツ追加関数
+function addPartComplete(partData) {
+  if (!db) {
+    throw new Error('データベースが初期化されていません');
+  }
+  
+  try {
+    // トランザクション開始
+    db.exec('BEGIN TRANSACTION');
+    
+    // 1. parts テーブル: 全カラム対応の挿入
+    const partStmt = db.prepare(`
+      INSERT INTO parts (
+        name, category_id, manufacturer, part_number, package,
+        voltage_rating, current_rating, power_rating, tolerance,
+        logic_family, description, datasheet_url, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+    
+    const partResult = partStmt.run([
+      partData.name || '',
+      partData.category_id || null,
+      partData.manufacturer || '',
+      partData.part_number || '',
+      partData.package || '',
+      partData.voltage_rating || '',      // 新規対応
+      partData.current_rating || '',      // 新規対応
+      partData.power_rating || '',        // 新規対応
+      partData.tolerance || '',           // 新規対応
+      partData.logic_family || '',
+      partData.description || '',
+      partData.datasheet_url || ''
+    ]);
+    
+    const partId = partResult.lastInsertRowid;
+    partStmt.free();
+    
+    // 2. inventory テーブル: 全カラム対応の挿入
+    const inventoryStmt = db.prepare(`
+      INSERT INTO inventory (
+        part_id, quantity, location, purchase_date,
+        shop, price_per_unit, currency, memo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    inventoryStmt.run([
+      partId,
+      partData.initial_stock || 0,
+      partData.location || '',            // 新規対応
+      partData.purchase_date || '',       // 新規対応
+      partData.shop || '',                // 新規対応
+      partData.price_per_unit || null,    // 新規対応
+      partData.currency || 'JPY',         // 新規対応
+      partData.memo || ''                 // 新規対応
+    ]);
+    
+    inventoryStmt.free();
+    
+    // トランザクション確定
+    db.exec('COMMIT');
+    
+    AppUtils.log(`パーツ追加成功: ID=${partId}, 名前=${partData.name}`, 'LocalDatabase');
+    
+    return { success: true, partId: partId };
+    
+  } catch (error) {
+    // エラー時はロールバック
+    try {
+      db.exec('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('❌ ロールバックエラー:', rollbackError);
+    }
+    
+    console.error('❌ パーツ追加エラー:', error);
+    throw new Error(`パーツの追加に失敗しました: ${error.message}`);
+  }
+}
+
+// ✅ 新規追加: 完全スキーマ対応のパーツ更新関数
+function updatePartComplete(partId, partData) {
+  if (!db) {
+    throw new Error('データベースが初期化されていません');
+  }
+  
+  try {
+    // トランザクション開始
+    db.exec('BEGIN TRANSACTION');
+    
+    // 1. parts テーブルの全カラム更新
+    const partStmt = db.prepare(`
+      UPDATE parts SET
+        name = ?, category_id = ?, manufacturer = ?, part_number = ?, package = ?,
+        voltage_rating = ?, current_rating = ?, power_rating = ?, tolerance = ?,
+        logic_family = ?, description = ?, datasheet_url = ?
+      WHERE id = ?
+    `);
+    
+    partStmt.run([
+      partData.name || '',
+      partData.category_id || null,
+      partData.manufacturer || '',
+      partData.part_number || '',
+      partData.package || '',
+      partData.voltage_rating || '',      // 新規対応
+      partData.current_rating || '',      // 新規対応
+      partData.power_rating || '',        // 新規対応
+      partData.tolerance || '',           // 新規対応
+      partData.logic_family || '',
+      partData.description || '',
+      partData.datasheet_url || '',
+      partId
+    ]);
+    
+    partStmt.free();
+    
+    // 2. inventory テーブルの全カラム更新
+    const inventoryStmt = db.prepare(`
+      UPDATE inventory SET
+        quantity = ?, location = ?, purchase_date = ?,
+        shop = ?, price_per_unit = ?, currency = ?, memo = ?
+      WHERE part_id = ?
+    `);
+    
+    inventoryStmt.run([
+      partData.quantity || 0,
+      partData.location || '',            // 新規対応
+      partData.purchase_date || '',       // 新規対応
+      partData.shop || '',                // 新規対応
+      partData.price_per_unit || null,    // 新規対応
+      partData.currency || 'JPY',         // 新規対応
+      partData.memo || '',                // 新規対応
+      partId
+    ]);
+    
+    inventoryStmt.free();
+    
+    // トランザクション確定
+    db.exec('COMMIT');
+    
+    AppUtils.log(`パーツ更新成功: ID=${partId}, 名前=${partData.name}`, 'LocalDatabase');
+    
+    return { success: true };
+    
+  } catch (error) {
+    // エラー時はロールバック
+    try {
+      db.exec('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('❌ ロールバックエラー:', rollbackError);
+    }
+    
+    console.error('❌ パーツ更新エラー:', error);
+    throw new Error(`パーツの更新に失敗しました: ${error.message}`);
+  }
+}
+
 console.log('local-database.js読み込み完了');

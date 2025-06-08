@@ -1064,3 +1064,193 @@ document.addEventListener('DOMContentLoaded', function() {
 }); // DOMContentLoaded終了
 
 console.log('✅ ePartsDB app.js loaded successfully (Option 1: 最小限修正)');
+
+// 修正: loadParts() 関数 - 全カラム読み込み対応
+function loadParts(categoryId) {
+  try {
+    // ✅ schema.sql 全カラム対応のSELECT文
+    const stmt = db.prepare(`
+      SELECT 
+        -- parts テーブル全カラム（schema.sql完全対応）
+        p.id, p.name, p.category_id, p.manufacturer, p.part_number, p.package,
+        p.voltage_rating, p.current_rating, p.power_rating, p.tolerance,
+        p.logic_family, p.description, p.datasheet_url, p.created_at,
+        
+        -- inventory テーブル全カラム（schema.sql完全対応）
+        i.id as inventory_id, i.quantity, i.location, i.purchase_date,
+        i.shop, i.price_per_unit, i.currency, i.memo,
+        
+        -- categories テーブル
+        c.name as category_name, c.parent_id, c.display_order
+      FROM parts p
+      LEFT JOIN inventory i ON p.id = i.part_id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.category_id = ?
+      ORDER BY p.name ASC
+    `);
+
+    const parts = [];
+    stmt.bind([categoryId]);
+    
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      // ✅ 完全データを保持（表示処理は既存コードを使用）
+      parts.push(row);
+    }
+    
+    stmt.free();
+    
+    // ✅ 既存の表示ロジックはそのまま使用
+    generatePartsTable(parts);
+    
+  } catch (error) {
+    console.error('❌ パーツ読み込みエラー:', error);
+    showStatus(`パーツの読み込みに失敗しました: ${error.message}`, 'error');
+  }
+}
+
+// 修正: searchParts() 関数 - 全カラム読み込み対応
+function searchParts(searchTerm) {
+  try {
+    const cleanSearchTerm = AppUtils.validateInput(searchTerm, 'search');
+    
+    if (cleanSearchTerm.length === 0) {
+      // 空文字の場合は全件表示
+      showAllParts();
+      return;
+    }
+
+    const searchPattern = `%${cleanSearchTerm}%`;
+    
+    // ✅ schema.sql 全カラム対応のSELECT文
+    const stmt = db.prepare(`
+      SELECT 
+        -- parts テーブル全カラム（schema.sql完全対応）
+        p.id, p.name, p.category_id, p.manufacturer, p.part_number, p.package,
+        p.voltage_rating, p.current_rating, p.power_rating, p.tolerance,
+        p.logic_family, p.description, p.datasheet_url, p.created_at,
+        
+        -- inventory テーブル全カラム（schema.sql完全対応）
+        i.id as inventory_id, i.quantity, i.location, i.purchase_date,
+        i.shop, i.price_per_unit, i.currency, i.memo,
+        
+        -- categories テーブル
+        c.name as category_name, c.parent_id, c.display_order
+      FROM parts p
+      LEFT JOIN inventory i ON p.id = i.part_id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.name LIKE ? OR p.part_number LIKE ? OR p.manufacturer LIKE ?
+      ORDER BY p.name ASC
+    `);
+
+    const parts = [];
+    stmt.bind([searchPattern, searchPattern, searchPattern]);
+    
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      parts.push(row);
+    }
+    
+    stmt.free();
+    
+    // ✅ 既存の表示ロジックを使用
+    generatePartsTable(parts);
+    
+    // 検索結果の表示更新
+    const resultCount = parts.length;
+    AppUtils.log(`検索完了: "${cleanSearchTerm}" - ${resultCount}件`);
+    
+    // 結果カウント表示
+    const searchInfo = document.getElementById('search-info');
+    if (searchInfo) {
+      searchInfo.textContent = `検索結果: ${resultCount}件`;
+      searchInfo.style.display = 'block';
+    }
+    
+  } catch (error) {
+    console.error('❌ 検索エラー:', error);
+    showStatus(`検索に失敗しました: ${error.message}`, 'error');
+  }
+}
+
+// 修正: loadCategories() 関数 - 全カラム読み込み対応
+function loadCategories() {
+  try {
+    // ✅ schema.sql 全カラム対応（parent_id含む）
+    const stmt = db.prepare(`
+      SELECT id, name, parent_id, display_order
+      FROM categories 
+      ORDER BY display_order ASC, name ASC
+    `);
+
+    const categories = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      categories.push(row);
+    }
+    
+    stmt.free();
+    
+    // ✅ 既存の表示ロジックを使用（parent_idは内部保持のみ）
+    generateCategoryTabs(categories);
+    
+    return categories;
+    
+  } catch (error) {
+    console.error('❌ カテゴリ読み込みエラー:', error);
+    showStatus(`カテゴリの読み込みに失敗しました: ${error.message}`, 'error');
+    return [];
+  }
+}
+
+// ✅ 新規追加: 現在のカテゴリID取得
+function getCurrentCategory() {
+  const activeTab = document.querySelector('.tab.active');
+  if (activeTab) {
+    return parseInt(activeTab.dataset.categoryId) || null;
+  }
+  return null;
+}
+
+// ✅ 新規追加: フォームセクションのスタイル追加
+function addFormSectionStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .form-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    
+    .form-section h4 {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 14px;
+      font-weight: bold;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+    
+    .form-section .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .form-section .form-group:last-child {
+      margin-bottom: 0;
+    }
+  `;
+  
+  // 既存のスタイルタグがなければ追加
+  if (!document.querySelector('#form-section-styles')) {
+    style.id = 'form-section-styles';
+    document.head.appendChild(style);
+  }
+}
+
+// ✅ 新規追加: アプリ初期化時にスタイル追加
+window.addEventListener('DOMContentLoaded', () => {
+  addFormSectionStyles();
+  // ...existing initialization code...
+});

@@ -255,3 +255,149 @@ window.hasLocalChanges = appState.hasLocalChanges;
 window.localChanges = appState.localChanges;
 
 AppUtils.log('AppState module loaded', 'State');
+
+// 修正: trackChange() 関数 - 拡張カラム対応
+function trackChange(type, data) {
+  if (!window.appState) {
+    console.warn('⚠️ appState が初期化されていません');
+    return;
+  }
+  
+  const timestamp = new Date().toISOString();
+  
+  switch (type) {
+    case 'add':
+      window.appState.localChanges.added.push({
+        tempId: generateTempId(),
+        timestamp: timestamp,
+        
+        // 基本情報
+        name: data.name || '',
+        category_id: data.category_id || null,
+        manufacturer: data.manufacturer || '',
+        part_number: data.part_number || '',
+        package: data.package || '',
+        description: data.description || '',
+        datasheet_url: data.datasheet_url || '',
+        
+        // ✅ 拡張情報（新規対応）
+        voltage_rating: data.voltage_rating || '',
+        current_rating: data.current_rating || '',
+        power_rating: data.power_rating || '',
+        tolerance: data.tolerance || '',
+        logic_family: data.logic_family || '',
+        
+        // ✅ 在庫拡張情報（新規対応）
+        initial_stock: data.initial_stock || 0,
+        location: data.location || '',
+        purchase_date: data.purchase_date || '',
+        shop: data.shop || '',
+        price_per_unit: data.price_per_unit || null,
+        currency: data.currency || 'JPY',
+        memo: data.memo || ''
+      });
+      
+      AppUtils.log(`変更追跡: パーツ追加 - ${data.name}`, 'AppState');
+      break;
+      
+    case 'modify':
+      // ✅ 変更前後の全カラムデータを記録
+      const modifyRecord = {
+        id: data.id,
+        timestamp: timestamp,
+        changes: {
+          // 基本情報
+          name: data.newValues.name || '',
+          category_id: data.newValues.category_id || null,
+          manufacturer: data.newValues.manufacturer || '',
+          part_number: data.newValues.part_number || '',
+          package: data.newValues.package || '',
+          description: data.newValues.description || '',
+          datasheet_url: data.newValues.datasheet_url || '',
+          
+          // ✅ 拡張情報（新規対応）
+          voltage_rating: data.newValues.voltage_rating || '',
+          current_rating: data.newValues.current_rating || '',
+          power_rating: data.newValues.power_rating || '',
+          tolerance: data.newValues.tolerance || '',
+          logic_family: data.newValues.logic_family || '',
+          
+          // ✅ 在庫拡張情報（新規対応）
+          quantity: data.newValues.quantity || 0,
+          location: data.newValues.location || '',
+          purchase_date: data.newValues.purchase_date || '',
+          shop: data.newValues.shop || '',
+          price_per_unit: data.newValues.price_per_unit || null,
+          currency: data.newValues.currency || 'JPY',
+          memo: data.newValues.memo || ''
+        },
+        original: {
+          // 変更前の値（全カラム対応）
+          name: data.oldValues.name || '',
+          category_id: data.oldValues.category_id || null,
+          manufacturer: data.oldValues.manufacturer || '',
+          part_number: data.oldValues.part_number || '',
+          package: data.oldValues.package || '',
+          description: data.oldValues.description || '',
+          datasheet_url: data.oldValues.datasheet_url || '',
+          
+          // ✅ 拡張情報（新規対応）
+          voltage_rating: data.oldValues.voltage_rating || '',
+          current_rating: data.oldValues.current_rating || '',
+          power_rating: data.oldValues.power_rating || '',
+          tolerance: data.oldValues.tolerance || '',
+          logic_family: data.oldValues.logic_family || '',
+          
+          // ✅ 在庫拡張情報（新規対応）
+          quantity: data.oldValues.quantity || 0,
+          location: data.oldValues.location || '',
+          purchase_date: data.oldValues.purchase_date || '',
+          shop: data.oldValues.shop || '',
+          price_per_unit: data.oldValues.price_per_unit || null,
+          currency: data.oldValues.currency || 'JPY',
+          memo: data.oldValues.memo || ''
+        }
+      };
+      
+      window.appState.localChanges.modified.push(modifyRecord);
+      
+      AppUtils.log(`変更追跡: パーツ変更 - ID:${data.id}, 名前:${data.newValues.name}`, 'AppState');
+      break;
+      
+    case 'delete':
+      window.appState.localChanges.deleted.push({
+        id: data.id,
+        timestamp: timestamp,
+        name: data.name || '',
+        part_number: data.part_number || ''
+      });
+      
+      AppUtils.log(`変更追跡: パーツ削除 - ID:${data.id}, 名前:${data.name}`, 'AppState');
+      break;
+      
+    case 'inventory':
+      window.appState.localChanges.inventory.push({
+        part_id: data.part_id,
+        timestamp: timestamp,
+        old_quantity: data.old_quantity || 0,
+        new_quantity: data.new_quantity || 0
+      });
+      
+      AppUtils.log(`変更追跡: 在庫変更 - パーツID:${data.part_id}, ${data.old_quantity} → ${data.new_quantity}`, 'AppState');
+      break;
+      
+    default:
+      console.warn('⚠️ 未知の変更タイプ:', type);
+      return;
+  }
+  
+  // 状態更新
+  window.appState.hasLocalChanges = true;
+  
+  // UI更新
+  updateChangeIndicator();
+  updateSyncButton();
+  
+  // localStorage保存
+  saveStateToLocalStorage();
+}
