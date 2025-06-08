@@ -48,12 +48,34 @@ class AppUtils {
   }
   
   /**
-   * ローカル環境判定
+   * ローカル環境判定（CONFIG連携版）
    * @returns {boolean} ローカル環境の場合true
    */
   static checkLocalEnvironment() {
     const hostname = window.location.hostname;
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.');
+    const protocol = window.location.protocol;
+    
+    console.log('🌐 環境判定 (CONFIG連携):', { hostname, protocol });
+    
+    // CONFIG.LOCAL_HOSTSを活用（フォールバック付き）
+    const LOCAL_HOSTS = (typeof CONFIG !== 'undefined' && CONFIG.LOCAL_HOSTS) ? 
+      CONFIG.LOCAL_HOSTS : ['localhost', '127.0.0.1', '', '.local'];
+    
+    // ホスト名による判定
+    const isLocalHost = LOCAL_HOSTS.some(host => {
+      if (host === '') {
+        return hostname === ''; // file://プロトコル
+      }
+      return hostname === host || hostname.endsWith(host);
+    });
+    
+    // file://プロトコルによる判定
+    const isFileProtocol = protocol === 'file:';
+    
+    const result = isLocalHost || isFileProtocol;
+    console.log('判定結果:', result ? 'ローカル' : 'リモート');
+    
+    return result;
   }
   
   /**
