@@ -53,17 +53,7 @@ class AppUtils {
    */
   static checkLocalEnvironment() {
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    
-    // CONFIG が未定義の場合のフォールバック
-    const LOCAL_HOSTS = (typeof CONFIG !== 'undefined' && CONFIG.LOCAL_HOSTS) ? 
-      CONFIG.LOCAL_HOSTS : ['localhost', '127.0.0.1', '', '.local'];
-    
-    return (
-      LOCAL_HOSTS.some(host => 
-        hostname === host || hostname.endsWith(host)
-      ) || protocol === 'file:'
-    );
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.');
   }
   
   /**
