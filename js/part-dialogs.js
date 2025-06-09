@@ -901,8 +901,6 @@ function setupAddPartDialogEvents() {
       }
 
       closeModal();
-      // alert(`パーツ「${formData.name}」を追加しました`); ← この行を削除
-  
     } catch (error) {
       AppUtils.log('パーツ追加エラー（UI操作）', 'DIALOGS', 'ERROR', { error: error.message });
       alert(`パーツの追加に失敗しました: ${error.message}`); // エラー時のみ保持
@@ -1171,8 +1169,6 @@ function setupEditPartDialogEvents(partId, modal) {
         }
         
         closeModal();
-        // alert(`パーツ「${formData.name}」を更新しました`); ← この行を削除
-  
       } catch (error) {
         AppUtils.log('パーツ編集エラー（UI操作）', 'DIALOGS', 'ERROR', { partId, error: error.message });
         alert(`パーツの更新に失敗しました: ${error.message}`); // エラー時のみ保持
