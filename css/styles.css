@@ -898,3 +898,182 @@ a:hover {
     font-size: 14px;
   }
 }
+
+/* ========================================
+   Phase 4: 同期機能UI
+   既存スタイルと完全に統合
+   ======================================== */
+
+/* 同期確認ダイアログ */
+.sync-confirm {
+  max-width: 600px;
+  width: 90%;
+}
+
+.sync-description {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #495057;
+  line-height: 1.5;
+}
+
+/* 変更統計表示 */
+.change-summary {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.change-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 15px;
+  color: #495057;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.change-item:last-child {
+  border-bottom: none;
+}
+
+.change-total {
+  border-top: 2px solid #007bff;
+  margin-top: 15px;
+  padding-top: 15px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #007bff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 手順説明 */
+.sync-instructions {
+  background-color: #e3f2fd;
+  border-left: 4px solid #007bff;
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.sync-instructions h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #0056b3;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sync-instructions ol {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.sync-instructions li {
+  margin-bottom: 8px;
+  color: #495057;
+}
+
+/* バックアップ推奨通知 */
+.backup-notice {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+.backup-notice p {
+  margin: 0;
+  font-size: 14px;
+  color: #856404;
+  line-height: 1.5;
+}
+
+/* モーダルヘッダーとフッター（既存と統合） */
+.sync-confirm .modal-header h2 {
+  margin: 0;
+  color: #007bff;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.sync-confirm .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #dee2e6;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .sync-confirm {
+    width: 95%;
+    max-width: none;
+    margin: 20px;
+  }
+  
+  .change-summary {
+    padding: 15px;
+  }
+  
+  .sync-instructions {
+    padding: 15px;
+  }
+  
+  .sync-instructions ol {
+    padding-left: 15px;
+  }
+  
+  .sync-confirm .modal-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .sync-confirm .modal-footer button {
+    width: 100%;
+  }
+}
+
+/* ダークモード対応（将来拡張用） */
+@media (prefers-color-scheme: dark) {
+  .change-summary {
+    background-color: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  .change-item {
+    color: #e2e8f0;
+    border-color: #4a5568;
+  }
+  
+  .sync-instructions {
+    background-color: #2a4365;
+    border-color: #3182ce;
+  }
+  
+  .sync-instructions h4 {
+    color: #63b3ed;
+  }
+  
+  .sync-instructions li {
+    color: #e2e8f0;
+  }
+  
+  .backup-notice {
+    background-color: #744210;
+    border-color: #975a16;
+  }
+  
+  .backup-notice p {
+    color: #fbd38d;
+  }
+}

@@ -922,6 +922,9 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(buffer => {
       originalDb = new window.SQLInstance.Database(new Uint8Array(buffer));
       
+      // 🔧 修正: window.originalDbを設定
+      window.originalDb = originalDb;
+      
       if (isLocalEnvironment) {
         const workingData = originalDb.export();
         db = new window.SQLInstance.Database(workingData);
@@ -1003,3 +1006,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 🚨 修正14: Line 最終行
 AppUtils.log('ePartsDB app.js読み込み完了', 'APP', 'INFO');
+
+// loadDatabase関数を修正してマスターDBを確実に初期化
+
+window.loadDatabase = async function() {
+  AppUtils.log('データベース読み込み開始', 'APP', 'INFO');
+  
+  try {
+    // SQL.jsライブラリの初期化
+    if (typeof initSqlJs === 'undefined') {
+      throw new Error('SQL.jsライブラリが読み込まれていません');
+    }
+    
+    const SQL = await initSqlJs({
+      locateFile: file => `${CONFIG.DATABASE.CDN_BASE}${file}`
+    });
+    
+    // SQLインスタンスをグローバルに保存（同期機能で必要）
+    window.SQLInstance = SQL;
+    
+    // CONFIG.DATABASE.URLを使用してデータベース読み込み
+    const dbUrl = CONFIG.DATABASE.URL;
+    AppUtils.log(`データベース読み込み試行: ${dbUrl}`, 'APP', 'DEBUG');
+    
+    const response = await fetch(dbUrl);
+    if (!response.ok) {
+      throw new Error(`データベースファイルの読み込みに失敗しました: ${response.status} (${dbUrl})`);
+    }
+    
+    const dbBuffer = await response.arrayBuffer();
+    const dbData = new Uint8Array(dbBuffer);
+    
+    // マスターデータベース初期化（同期機能用）
+    window.originalDb = new SQL.Database(dbData);
+    AppUtils.log('マスターデータベース初期化完了', 'APP', 'INFO');
+    
+    // 作業用データベース初期化（既存機能用）
+    window.db = new SQL.Database(dbData);
+    AppUtils.log('作業用データベース初期化完了', 'APP', 'INFO');
+    
+    AppUtils.log(`データベース読み込み完了: ${dbUrl}`, 'APP', 'INFO');
+    
+    // ステータス更新
+    const statusElement = document.getElementById('status');
+    if (statusElement) {
+      statusElement.textContent = 'データベースの読み込みが完了しました。';
+      statusElement.className = 'status';
+    }
+    
+    return true;
+    
+  } catch (error) {
+    AppUtils.log('データベース読み込みエラー', 'APP', 'ERROR', { 
+      error: error.message,
+      configPath: CONFIG.DATABASE.URL 
+    });
+    throw error;
+  }
+};
