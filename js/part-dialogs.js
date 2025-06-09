@@ -130,39 +130,24 @@ function updatePart(partId, data) {
       throw new Error('データベースが初期化されていません');
     }
 
+    // パーツを更新（タイムスタンプカラム除外）
     window.db.exec('BEGIN TRANSACTION');
 
-    // パーツ基本情報を更新
-    const partStmt = window.db.prepare(`
+    const stmt = window.db.prepare(`
       UPDATE parts SET 
         name = ?, category_id = ?, manufacturer = ?, part_number = ?,
         package = ?, voltage_rating = ?, current_rating = ?, power_rating = ?,
-        tolerance = ?, logic_family = ?, description = ?, datasheet_url = ?,
-        updated_at = datetime('now')
+        tolerance = ?, logic_family = ?, description = ?, datasheet_url = ?
       WHERE id = ?
     `);
     
-    partStmt.run([
+    stmt.run([
       data.name, data.category_id, data.manufacturer, data.part_number,
       data.package, data.voltage_rating, data.current_rating, data.power_rating,
       data.tolerance, data.logic_family, data.description, data.datasheet_url,
       partId
     ]);
-    partStmt.free();
-
-    // 在庫情報を更新
-    const invStmt = window.db.prepare(`
-      UPDATE inventory SET 
-        quantity = ?, location = ?, purchase_date = ?, shop = ?,
-        price_per_unit = ?, currency = ?, memo = ?
-      WHERE part_id = ?
-    `);
-    
-    invStmt.run([
-      data.quantity, data.location, data.purchase_date, data.shop,
-      data.price_per_unit, data.currency, data.memo, partId
-    ]);
-    invStmt.free();
+    stmt.free();
 
     window.db.exec('COMMIT');
     AppUtils.log('パーツ更新完了', 'DIALOGS', 'INFO', { partId, name: data.name });
@@ -870,16 +855,16 @@ function setupAddPartDialogEvents() {
         return;
       }
 
-      // データベース保存処理（全項目対応）
+      // データベース保存処理（updated_at/created_atカラム除外）
       window.db.exec('BEGIN TRANSACTION');
-      
-      // パーツデータを挿入（電気特性含む）
+
+      // パーツデータを挿入（タイムスタンプカラム除外）
       const stmt = window.db.prepare(`
         INSERT INTO parts (
           name, category_id, manufacturer, part_number, package,
           voltage_rating, current_rating, power_rating, tolerance, logic_family,
-          description, datasheet_url, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+          description, datasheet_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -892,7 +877,7 @@ function setupAddPartDialogEvents() {
       const partId = window.db.exec("SELECT last_insert_rowid()")[0].values[0][0];
       stmt.free();
 
-      // 在庫データを挿入（購入情報含む）
+      // 在庫データを挿入
       const invStmt = window.db.prepare(`
         INSERT INTO inventory (
           part_id, quantity, location, purchase_date, shop, 
@@ -916,12 +901,11 @@ function setupAddPartDialogEvents() {
       }
 
       closeModal();
-      alert(`パーツ「${formData.name}」を追加しました`);
-
+      // alert(`パーツ「${formData.name}」を追加しました`); ← この行を削除
+  
     } catch (error) {
-      window.db.exec('ROLLBACK');
-      AppUtils.log('パーツ追加エラー', 'DIALOGS', 'ERROR', { error: error.message });
-      alert(`パーツの追加に失敗しました: ${error.message}`);
+      AppUtils.log('パーツ追加エラー（UI操作）', 'DIALOGS', 'ERROR', { error: error.message });
+      alert(`パーツの追加に失敗しました: ${error.message}`); // エラー時のみ保持
       saveBtn.disabled = false;
       saveBtn.textContent = '🔧 追加';
     }
@@ -1187,11 +1171,11 @@ function setupEditPartDialogEvents(partId, modal) {
         }
         
         closeModal();
-        alert(`パーツ「${formData.name}」を更新しました`);
-        
+        // alert(`パーツ「${formData.name}」を更新しました`); ← この行を削除
+  
       } catch (error) {
         AppUtils.log('パーツ編集エラー（UI操作）', 'DIALOGS', 'ERROR', { partId, error: error.message });
-        alert(`パーツの更新に失敗しました: ${error.message}`);
+        alert(`パーツの更新に失敗しました: ${error.message}`); // エラー時のみ保持
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 更新';
       }

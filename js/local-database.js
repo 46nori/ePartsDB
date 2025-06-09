@@ -23,13 +23,13 @@ window.addPart = function(partData) {
       // トランザクション開始
       window.db.exec('BEGIN TRANSACTION');
 
-      // パーツデータを挿入
+      // パーツデータを挿入（タイムスタンプカラム除外）
       const stmt = window.db.prepare(`
         INSERT INTO parts (
           name, category_id, manufacturer, part_number, package,
           voltage_rating, current_rating, power_rating, tolerance, logic_family,
-          description, datasheet_url, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+          description, datasheet_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -110,13 +110,12 @@ window.updatePart = function(partId, partData) {
       // トランザクション開始
       window.db.exec('BEGIN TRANSACTION');
 
-      // パーツ基本情報を更新
+      // パーツ基本情報を更新（タイムスタンプカラム除外）
       const partStmt = window.db.prepare(`
         UPDATE parts SET 
           name = ?, category_id = ?, manufacturer = ?, part_number = ?,
           package = ?, voltage_rating = ?, current_rating = ?, power_rating = ?,
-          tolerance = ?, logic_family = ?, description = ?, datasheet_url = ?,
-          updated_at = datetime('now')
+          tolerance = ?, logic_family = ?, description = ?, datasheet_url = ?
         WHERE id = ?
       `);
       
