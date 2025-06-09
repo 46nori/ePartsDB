@@ -240,8 +240,7 @@ function showDeleteConfirmDialog(partId, partName) {
           <div class="modal-body">
             <div class="delete-warning">
               <p class="warning-text">
-                以下のパーツとその在庫情報を削除します。<br>
-                この操作は取り消すことができません。
+                以下のパーツとその在庫情報を削除します。
               </p>
               
               <div class="part-info-delete">
@@ -343,6 +342,14 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
       deletePart(partId);
       
       AppUtils.log('パーツ削除完了（UI操作）', 'DIALOGS', 'INFO', { partId, partName });
+      
+      // 修正カウントを追加
+      if (typeof window.trackLocalChange === 'function') {
+        window.trackLocalChange('deleted', { 
+          id: partId, 
+          name: partName 
+        });
+      }
       
       // モーダルを閉じる
       closeModal();
@@ -536,6 +543,14 @@ function setupInventoryDialogEvents(partId) {
       stmt.free();
       
       AppUtils.log('在庫情報更新完了', 'DIALOGS', 'INFO', { partId });
+      
+      // 修正カウントを追加
+      if (typeof window.trackLocalChange === 'function') {
+        window.trackLocalChange('inventory_updated', { 
+          id: partId, 
+          quantity: inventoryData.quantity 
+        });
+      }
       
       // ビューを更新
       if (typeof window.refreshCurrentView === 'function') {
@@ -895,6 +910,15 @@ function setupAddPartDialogEvents() {
 
       AppUtils.log('パーツ追加完了', 'DIALOGS', 'INFO', { partId, name: formData.name });
 
+      // 修正カウントを追加
+      if (typeof window.trackLocalChange === 'function') {
+        window.trackLocalChange('added', { 
+          id: partId, 
+          name: formData.name,
+          category_id: formData.category_id 
+        });
+      }
+
       // ビューを更新
       if (typeof window.refreshCurrentView === 'function') {
         window.refreshCurrentView();
@@ -1162,6 +1186,15 @@ function setupEditPartDialogEvents(partId, modal) {
         updatePart(partId, formData);
         
         AppUtils.log('パーツ編集完了（UI操作）', 'DIALOGS', 'INFO', { partId, name: formData.name });
+        
+        // 修正カウントを追加
+        if (typeof window.trackLocalChange === 'function') {
+          window.trackLocalChange('modified', { 
+            id: partId, 
+            name: formData.name,
+            category_id: formData.category_id 
+          });
+        }
         
         // ビューを更新
         if (typeof window.refreshCurrentView === 'function') {
