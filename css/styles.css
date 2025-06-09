@@ -844,3 +844,57 @@ a:hover {
     margin: 4px 0;
   }
 }
+
+/* ===== フォームセクション（電気特性用） ===== */
+.form-section {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.form-section h4 {
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #2196F3;
+  color: #1976D2;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-row .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.required {
+  color: #f44336;
+  font-weight: bold;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .form-section {
+    padding: 12px;
+    margin: 16px 0;
+  }
+  
+  .form-section h4 {
+    font-size: 14px;
+  }
+}

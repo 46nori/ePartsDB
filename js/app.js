@@ -169,15 +169,19 @@ document.addEventListener('DOMContentLoaded', function() {
       const resetBtn = document.getElementById('reset-btn');
 
       if (addPartBtn) {
-        addPartBtn.addEventListener('click', () => {
-          if (typeof window.showAddPartDialog === 'function') {
-            window.showAddPartDialog();
+        // 修正: 直接的なイベント設定
+        addPartBtn.onclick = function() {
+          console.log('🔧 パーツ追加ボタンクリック');
+          if (typeof showAddPartDialog === 'function') {
+            showAddPartDialog();
           } else {
             alert('パーツ追加機能が読み込まれていません。ページを再読み込みしてください。');
           }
-        });
+        };
+        console.log('✅ パーツ追加ボタンイベント設定完了');
       }
 
+      // 他のボタン設定は既存のまま
       if (syncBtn) {
         syncBtn.addEventListener('click', () => {
           const state = getState();
@@ -453,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
               ${isLocalEnvironment ? `
                 <td class="actions">
                   <button class="btn-edit" data-part-id="${part.id}" title="編集">✏️</button>
-                  <button class="btn-delete" data-part-id="${part.id}" title="削除">🗑️</button>
+                  ${createDeleteButton(part)}
                 </td>
               ` : ''}
             </tr>
@@ -740,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const actionColumn = isLocalEnvironment ? `
           <td class="actions">
             <button class="btn-edit" data-part-id="${row.id}" title="編集">✏️</button>
-            <button class="btn-delete" data-part-id="${row.id}" title="削除">🗑️</button>
+            ${createDeleteButton(row)}
           </td>
         ` : '';
 
