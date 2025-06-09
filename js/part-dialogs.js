@@ -238,11 +238,6 @@ function showDeleteConfirmDialog(partId, partName) {
     // パーツ名の決定（引数優先、なければDBから取得）
     const finalPartName = partName || part.name;
     
-    // 🚨 削除：デバッグメッセージを除去
-    // console.log('パーツID:', partId);
-    // console.log('元のpartName引数:', partName);
-    // console.log('最終決定パーツ名:', finalPartName);
-    
     // 既存のモーダルを削除
     const existingModal = document.getElementById('delete-confirm-modal');
     if (existingModal) {
@@ -265,11 +260,11 @@ function showDeleteConfirmDialog(partId, partName) {
               </p>
               
               <div class="part-info-delete">
-                <h3 class="part-name">🔧 ${escapeHtml(finalPartName)}</h3>
+                <h3 class="part-name">🔧 ${finalPartName}</h3>
                 <p class="part-details">
                   カテゴリ: ${part.category_name || '未分類'}<br>
-                  ${part.manufacturer ? `メーカー: ${escapeHtml(part.manufacturer)}<br>` : ''}
-                  ${part.part_number ? `型番: ${escapeHtml(part.part_number)}<br>` : ''}
+                  ${part.manufacturer ? `メーカー: ${part.manufacturer}<br>` : ''}
+                  ${part.part_number ? `型番: ${part.part_number}<br>` : ''}
                   現在の在庫: ${part.quantity || 0}個
                 </p>
               </div>
@@ -323,7 +318,6 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
   // キャンセル・閉じる
   if (cancelBtn) {
     cancelBtn.addEventListener('click', (e) => {
-      console.log('🚫 キャンセルボタンクリック (削除確認)');
       e.preventDefault();
       e.stopPropagation();
       closeModal();
@@ -332,7 +326,6 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
   
   if (closeBtn) {
     closeBtn.addEventListener('click', (e) => {
-      console.log('❌ 閉じるボタンクリック (削除確認)');
       e.preventDefault();
       e.stopPropagation();
       closeModal();
@@ -342,7 +335,6 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
   // モーダル外クリック
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
-      console.log('👆 モーダル外クリック (削除確認)');
       closeModal();
     }
   });
@@ -350,7 +342,6 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
   // ESCキーハンドラー
   const escKeyHandler = (e) => {
     if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
-      console.log('⌨️ ESCキー押下 (削除確認ダイアログ)');
       closeModal();
       document.removeEventListener('keydown', escKeyHandler);
     }
@@ -387,7 +378,7 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
   console.log('✅ 削除確認ダイアログイベント設定完了 (ESCキー対応済み)');
 }
 
-// ===== ダイアログ：在庫管理 =====
+// ===== ダイアログ：在庫管理（完全版・CONFIG適用） =====
 function showInventoryDialog(partId) {
   console.log('📦 在庫管理ダイアログを表示します:', partId);
   
@@ -400,6 +391,7 @@ function showInventoryDialog(partId) {
       existingModal.remove();
     }
     
+    // 🚨 修正：CONFIG定数適用 + 全機能保持
     const modalHtml = `
       <div id="inventory-modal" class="modal-overlay">
         <div class="modal">
@@ -422,13 +414,13 @@ function showInventoryDialog(partId) {
               <div class="form-group">
                 <label class="form-label" for="inventory-quantity">在庫数</label>
                 <input type="number" class="form-input" id="inventory-quantity" 
-                       min="0" max="9999" value="${part.quantity || 0}">
+                       min="0" max="${CONFIG.LIMITS.MAX_QUANTITY}" value="${part.quantity || 0}">
               </div>
               
               <div class="form-group">
                 <label class="form-label" for="inventory-location">保管場所</label>
                 <input type="text" class="form-input" id="inventory-location" 
-                       value="${part.location || ''}" maxlength="100">
+                       value="${part.location || ''}" maxlength="${CONFIG.LIMITS.LOCATION}">
               </div>
               
               <div class="form-row">
@@ -441,7 +433,7 @@ function showInventoryDialog(partId) {
                 <div class="form-group">
                   <label class="form-label" for="inventory-shop">購入店舗</label>
                   <input type="text" class="form-input" id="inventory-shop" 
-                         value="${part.shop || ''}" maxlength="100">
+                         value="${part.shop || ''}" maxlength="${CONFIG.LIMITS.SHOP}">
                 </div>
               </div>
               
@@ -449,7 +441,7 @@ function showInventoryDialog(partId) {
                 <div class="form-group">
                   <label class="form-label" for="inventory-price">単価</label>
                   <input type="number" class="form-input" id="inventory-price" 
-                         min="0" step="0.01" value="${part.price_per_unit || ''}">
+                         min="0" max="${CONFIG.LIMITS.MAX_PRICE}" step="0.01" value="${part.price_per_unit || ''}">
                 </div>
                 
                 <div class="form-group">
@@ -465,7 +457,7 @@ function showInventoryDialog(partId) {
               
               <div class="form-group">
                 <label class="form-label" for="inventory-memo">メモ</label>
-                <textarea class="form-textarea" id="inventory-memo" maxlength="500">${part.memo || ''}</textarea>
+                <textarea class="form-textarea" id="inventory-memo" maxlength="${CONFIG.LIMITS.MEMO}">${part.memo || ''}</textarea>
               </div>
             </form>
           </div>
@@ -579,7 +571,7 @@ function setupInventoryDialogEvents(partId) {
   });
 }
 
-// ===== ダイアログ：パーツ追加（完全版） =====
+// ===== ダイアログ：パーツ追加（完全版・CONFIG適用） =====
 function showAddPartDialog() {
   console.log('🆕 統合版 showAddPartDialog 実行');
   
@@ -596,6 +588,7 @@ function showAddPartDialog() {
     existingModal.remove();
   }
   
+  // 🚨 修正：CONFIG定数適用 + 全機能（電気特性・在庫情報）保持
   const modalHtml = `
     <div id="add-part-modal" class="modal-overlay">
       <div class="modal">
@@ -609,7 +602,7 @@ function showAddPartDialog() {
             <!-- 基本情報 -->
             <div class="form-group">
               <label class="form-label" for="add-part-name">パーツ名 <span class="required">*</span></label>
-              <input type="text" class="form-input" id="add-part-name" required maxlength="100" 
+              <input type="text" class="form-input" id="add-part-name" required maxlength="${CONFIG.LIMITS.PART_NAME}" 
                      placeholder="例: 74HC00, 1kΩ抵抗">
             </div>
             
@@ -625,32 +618,34 @@ function showAddPartDialog() {
             
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label" for="add-part-manufacturer">メーカー</label>
-                <input type="text" class="form-input" id="add-part-manufacturer" maxlength="50" 
+                <label class="form-label" for="add-manufacturer">メーカー</label>
+                <input type="text" class="form-input" id="add-manufacturer" maxlength="${CONFIG.LIMITS.MANUFACTURER}" 
                        placeholder="例: Texas Instruments">
               </div>
               
               <div class="form-group">
                 <label class="form-label" for="add-part-number">型番</label>
-                <input type="text" class="form-input" id="add-part-number" maxlength="50" 
+                <input type="text" class="form-input" id="add-part-number" maxlength="${CONFIG.LIMITS.PART_NUMBER}" 
                        placeholder="例: SN74HC00N">
               </div>
             </div>
 
-            <!-- ⚡ 電気特性セクション -->
+            <!-- ⚡ 電気特性セクション（完全CONFIG定数適用） -->
             <div class="form-section">
               <h4>⚡ 電気特性</h4>
               
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="add-part-voltage-rating">耐圧</label>
-                  <input type="text" class="form-input" id="add-part-voltage-rating" maxlength="50"
+                  <input type="text" class="form-input" id="add-part-voltage-rating" 
+                         maxlength="${CONFIG.LIMITS.ELECTRICAL.VOLTAGE_RATING}"
                          placeholder="例: 50V, 3.3V, ±15V">
                 </div>
                 
                 <div class="form-group">
                   <label class="form-label" for="add-part-current-rating">電流制限</label>
-                  <input type="text" class="form-input" id="add-part-current-rating" maxlength="50"
+                  <input type="text" class="form-input" id="add-part-current-rating" 
+                         maxlength="${CONFIG.LIMITS.ELECTRICAL.CURRENT_RATING}"
                          placeholder="例: 1A, 20mA">
                 </div>
               </div>
@@ -658,20 +653,23 @@ function showAddPartDialog() {
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="add-part-power-rating">定格電力</label>
-                  <input type="text" class="form-input" id="add-part-power-rating" maxlength="50"
+                  <input type="text" class="form-input" id="add-part-power-rating" 
+                         maxlength="${CONFIG.LIMITS.ELECTRICAL.POWER_RATING}"
                          placeholder="例: 0.25W, 1W">
                 </div>
                 
                 <div class="form-group">
                   <label class="form-label" for="add-part-tolerance">誤差</label>
-                  <input type="text" class="form-input" id="add-part-tolerance" maxlength="20"
+                  <input type="text" class="form-input" id="add-part-tolerance" 
+                         maxlength="${CONFIG.LIMITS.ELECTRICAL.TOLERANCE}"
                          placeholder="例: ±1%, ±5%">
                 </div>
               </div>
               
               <div class="form-group">
                 <label class="form-label" for="add-part-logic-family">ロジックファミリ</label>
-                <input type="text" class="form-input" id="add-part-logic-family" maxlength="50"
+                <input type="text" class="form-input" id="add-part-logic-family" 
+                       maxlength="${CONFIG.LIMITS.ELECTRICAL.LOGIC_FAMILY}"
                        placeholder="例: LS, HC, CMOS">
               </div>
             </div>
@@ -679,63 +677,65 @@ function showAddPartDialog() {
             <!-- 物理仕様 -->
             <div class="form-group">
               <label class="form-label" for="add-part-package">パッケージ</label>
-              <input type="text" class="form-input" id="add-part-package" maxlength="20" 
+              <input type="text" class="form-input" id="add-part-package" 
+                     maxlength="${CONFIG.LIMITS.PACKAGE_MAX}" 
                      placeholder="例: DIP-14, SOT-23, 0603">
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="add-part-description">説明</label>
-              <textarea class="form-textarea" id="add-part-description" maxlength="200"
+              <label class="form-label" for="add-description">説明</label>
+              <textarea class="form-textarea" id="add-description" maxlength="${CONFIG.LIMITS.DESCRIPTION}"
                         placeholder="部品の機能や用途を記載..."></textarea>
             </div>
             
             <div class="form-group">
               <label class="form-label" for="add-part-datasheet">データシートURL</label>
-              <input type="url" class="form-input" id="add-part-datasheet" maxlength="255" 
+              <input type="url" class="form-input" id="add-part-datasheet" 
+                     maxlength="${CONFIG.LIMITS.URL_MAX}" 
                      placeholder="https://example.com/datasheet.pdf">
             </div>
 
-            <!-- 📦 在庫・購入情報セクション -->
+            <!-- 📦 在庫・購入情報セクション（完全保持） -->
             <div class="form-section">
               <h4>📦 在庫・購入情報</h4>
               
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="add-part-stock">初期在庫数</label>
-                  <input type="number" class="form-input" id="add-part-stock" min="0" max="9999" 
+                  <label class="form-label" for="add-quantity">初期在庫数</label>
+                  <input type="number" class="form-input" id="add-quantity" min="0" max="${CONFIG.LIMITS.MAX_QUANTITY}" 
                          value="1" placeholder="1">
                 </div>
                 
                 <div class="form-group">
-                  <label class="form-label" for="add-part-location">保管場所</label>
-                  <input type="text" class="form-input" id="add-part-location" maxlength="100"
+                  <label class="form-label" for="add-location">保管場所</label>
+                  <input type="text" class="form-input" id="add-location" maxlength="${CONFIG.LIMITS.LOCATION}"
                          placeholder="例: 棚A-1, 引き出し2">
                 </div>
               </div>
               
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="add-part-purchase-date">購入日</label>
-                  <input type="date" class="form-input" id="add-part-purchase-date">
+                  <label class="form-label" for="add-purchase-date">購入日</label>
+                  <input type="date" class="form-input" id="add-purchase-date">
                 </div>
                 
                 <div class="form-group">
-                  <label class="form-label" for="add-part-shop">購入店舗</label>
-                  <input type="text" class="form-input" id="add-part-shop" maxlength="100"
+                  <label class="form-label" for="add-shop">購入店舗</label>
+                  <input type="text" class="form-input" id="add-shop" maxlength="${CONFIG.LIMITS.SHOP}"
                          placeholder="例: 秋月電子、DigiKey">
                 </div>
               </div>
               
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="add-part-price">単価</label>
-                  <input type="number" class="form-input" id="add-part-price" min="0" step="0.01"
+                  <label class="form-label" for="add-price">単価</label>
+                  <input type="number" class="form-input" id="add-price" min="0" max="${CONFIG.LIMITS.MAX_PRICE}" step="0.01"
                          placeholder="0.00">
                 </div>
                 
                 <div class="form-group">
-                  <label class="form-label" for="add-part-currency">通貨</label>
-                  <select class="form-select" id="add-part-currency">
+                  <label class="form-label" for="add-currency">通貨</label>
+                  <select class="form-select" id="add-currency">
                     <option value="JPY" selected>JPY (円)</option>
                     <option value="USD">USD (ドル)</option>
                     <option value="EUR">EUR (ユーロ)</option>
@@ -745,8 +745,8 @@ function showAddPartDialog() {
               </div>
               
               <div class="form-group">
-                <label class="form-label" for="add-part-memo">メモ</label>
-                <textarea class="form-textarea" id="add-part-memo" maxlength="500"
+                <label class="form-label" for="add-memo">メモ</label>
+                <textarea class="form-textarea" id="add-memo" maxlength="${CONFIG.LIMITS.MEMO}"
                           placeholder="特記事項、使用予定など..."></textarea>
               </div>
             </div>
@@ -797,7 +797,6 @@ function setupAddPartDialogEvents() {
   // キャンセルボタン
   if (cancelBtn) {
     cancelBtn.addEventListener('click', (e) => {
-      console.log('🚫 キャンセルボタンクリック (追加ダイアログ)');
       e.preventDefault();
       e.stopPropagation();
       closeModal();
@@ -807,7 +806,6 @@ function setupAddPartDialogEvents() {
   // 閉じるボタン
   if (closeBtn) {
     closeBtn.addEventListener('click', (e) => {
-      console.log('❌ 閉じるボタンクリック (追加ダイアログ)');
       e.preventDefault();
       e.stopPropagation();
       closeModal();
@@ -817,7 +815,6 @@ function setupAddPartDialogEvents() {
   // モーダル外クリック
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
-      console.log('👆 モーダル外クリック (追加ダイアログ)');
       closeModal();
     }
   });
@@ -825,7 +822,6 @@ function setupAddPartDialogEvents() {
   // ESCキーハンドラー
   const escKeyHandler = (e) => {
     if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
-      console.log('⌨️ ESCキー押下 (追加ダイアログ)');
       closeModal();
       document.removeEventListener('keydown', escKeyHandler);
     }
@@ -834,7 +830,7 @@ function setupAddPartDialogEvents() {
   
   console.log('✅ 追加ダイアログイベント設定完了 (ESCキー対応済み)');
   
-  // 保存処理
+  // 保存処理（全機能対応）
   saveBtn.addEventListener('click', (e) => {
     e.preventDefault();
     
@@ -842,27 +838,32 @@ function setupAddPartDialogEvents() {
       saveBtn.disabled = true;
       saveBtn.textContent = '追加中...';
       
-      // データ収集とバリデーション
+      // 🚨 修正：全データ項目（電気特性・在庫情報）を収集
       const formData = {
+        // 基本情報
         name: document.getElementById('add-part-name').value.trim(),
         category_id: parseInt(document.getElementById('add-part-category').value) || null,
-        manufacturer: document.getElementById('add-part-manufacturer').value.trim() || null,
+        manufacturer: document.getElementById('add-manufacturer').value.trim() || null,
         part_number: document.getElementById('add-part-number').value.trim() || null,
         package: document.getElementById('add-part-package').value.trim() || null,
+        description: document.getElementById('add-description').value.trim() || null,
+        datasheet_url: document.getElementById('add-part-datasheet').value.trim() || null,
+        
+        // ⚡ 電気特性（完全保持）
         voltage_rating: document.getElementById('add-part-voltage-rating').value.trim() || null,
         current_rating: document.getElementById('add-part-current-rating').value.trim() || null,
         power_rating: document.getElementById('add-part-power-rating').value.trim() || null,
         tolerance: document.getElementById('add-part-tolerance').value.trim() || null,
         logic_family: document.getElementById('add-part-logic-family').value.trim() || null,
-        description: document.getElementById('add-part-description').value.trim() || null,
-        datasheet_url: document.getElementById('add-part-datasheet').value.trim() || null,
-        quantity: parseInt(document.getElementById('add-part-stock').value) || 1,
-        location: document.getElementById('add-part-location').value.trim() || null,
-        purchase_date: document.getElementById('add-part-purchase-date').value.trim() || null,
-        shop: document.getElementById('add-part-shop').value.trim() || null,
-        price_per_unit: parseFloat(document.getElementById('add-part-price').value) || null,
-        currency: document.getElementById('add-part-currency').value.trim() || null,
-        memo: document.getElementById('add-part-memo').value.trim() || null
+        
+        // 📦 在庫・購入情報（完全保持）
+        quantity: parseInt(document.getElementById('add-quantity').value) || 1,
+        location: document.getElementById('add-location').value.trim() || null,
+        purchase_date: document.getElementById('add-purchase-date').value.trim() || null,
+        shop: document.getElementById('add-shop').value.trim() || null,
+        price_per_unit: parseFloat(document.getElementById('add-price').value) || null,
+        currency: document.getElementById('add-currency').value.trim() || null,
+        memo: document.getElementById('add-memo').value.trim() || null
       };
       
       // バリデーション
@@ -873,10 +874,10 @@ function setupAddPartDialogEvents() {
         return;
       }
 
-      // データベース保存処理
+      // データベース保存処理（全項目対応）
       window.db.exec('BEGIN TRANSACTION');
       
-      // パーツデータを挿入
+      // パーツデータを挿入（電気特性含む）
       const stmt = window.db.prepare(`
         INSERT INTO parts (
           name, category_id, manufacturer, part_number, package,
@@ -895,7 +896,7 @@ function setupAddPartDialogEvents() {
       const partId = window.db.exec("SELECT last_insert_rowid()")[0].values[0][0];
       stmt.free();
 
-      // 在庫データを挿入
+      // 在庫データを挿入（購入情報含む）
       const invStmt = window.db.prepare(`
         INSERT INTO inventory (
           part_id, quantity, location, purchase_date, shop, 
@@ -931,7 +932,7 @@ function setupAddPartDialogEvents() {
   });
 }
 
-// ===== ダイアログ：パーツ編集（修正版） =====
+// ===== ダイアログ：パーツ編集（完全版・CONFIG適用） =====
 function showEditPartDialog(partId) {
   console.log('🔧 パーツ編集ダイアログを表示します:', partId);
   
@@ -947,10 +948,10 @@ function showEditPartDialog(partId) {
     // 既存のモーダルを削除
     const existingModal = document.getElementById('edit-part-modal');
     if (existingModal) {
-      console.log('🗑️ 既存の編集モーダルを削除');
       existingModal.remove();
     }
     
+    // 🚨 修正：CONFIG定数適用 + 全機能（電気特性）保持
     const modalHtml = `
       <div id="edit-part-modal" class="modal-overlay">
         <div class="modal">
@@ -964,7 +965,7 @@ function showEditPartDialog(partId) {
               <!-- 基本情報 -->
               <div class="form-group">
                 <label class="form-label" for="edit-part-name">パーツ名 <span class="required">*</span></label>
-                <input type="text" class="form-input" id="edit-part-name" required maxlength="100" 
+                <input type="text" class="form-input" id="edit-part-name" required maxlength="${CONFIG.LIMITS.PART_NAME}" 
                        value="${part.name || ''}" placeholder="例: 74HC00, 1kΩ抵抗">
               </div>
               
@@ -981,31 +982,33 @@ function showEditPartDialog(partId) {
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="edit-part-manufacturer">メーカー</label>
-                  <input type="text" class="form-input" id="edit-part-manufacturer" maxlength="50" 
+                  <input type="text" class="form-input" id="edit-part-manufacturer" maxlength="${CONFIG.LIMITS.MANUFACTURER}" 
                          value="${part.manufacturer || ''}" placeholder="例: Texas Instruments">
                 </div>
                 
                 <div class="form-group">
                   <label class="form-label" for="edit-part-number">型番</label>
-                  <input type="text" class="form-input" id="edit-part-number" maxlength="50" 
+                  <input type="text" class="form-input" id="edit-part-number" maxlength="${CONFIG.LIMITS.PART_NUMBER}" 
                          value="${part.part_number || ''}" placeholder="例: SN74HC00N">
                 </div>
               </div>
 
-              <!-- ⚡ 電気特性セクション -->
+              <!-- ⚡ 電気特性セクション（完全保持） -->
               <div class="form-section">
                 <h4>⚡ 電気特性</h4>
                 
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label" for="edit-part-voltage-rating">耐圧</label>
-                    <input type="text" class="form-input" id="edit-part-voltage-rating" maxlength="50"
+                    <input type="text" class="form-input" id="edit-part-voltage-rating" 
+                           maxlength="${CONFIG.LIMITS.ELECTRICAL.VOLTAGE_RATING}"
                            value="${part.voltage_rating || ''}" placeholder="例: 50V, 3.3V, ±15V">
                   </div>
                   
                   <div class="form-group">
                     <label class="form-label" for="edit-part-current-rating">電流制限</label>
-                    <input type="text" class="form-input" id="edit-part-current-rating" maxlength="50"
+                    <input type="text" class="form-input" id="edit-part-current-rating" 
+                           maxlength="${CONFIG.LIMITS.ELECTRICAL.CURRENT_RATING}"
                            value="${part.current_rating || ''}" placeholder="例: 1A, 20mA">
                   </div>
                 </div>
@@ -1013,20 +1016,23 @@ function showEditPartDialog(partId) {
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label" for="edit-part-power-rating">定格電力</label>
-                    <input type="text" class="form-input" id="edit-part-power-rating" maxlength="50"
+                    <input type="text" class="form-input" id="edit-part-power-rating" 
+                           maxlength="${CONFIG.LIMITS.ELECTRICAL.POWER_RATING}"
                            value="${part.power_rating || ''}" placeholder="例: 0.25W, 1W">
                   </div>
                   
                   <div class="form-group">
                     <label class="form-label" for="edit-part-tolerance">誤差</label>
-                    <input type="text" class="form-input" id="edit-part-tolerance" maxlength="20"
+                    <input type="text" class="form-input" id="edit-part-tolerance" 
+                           maxlength="${CONFIG.LIMITS.ELECTRICAL.TOLERANCE}"
                            value="${part.tolerance || ''}" placeholder="例: ±1%, ±5%">
                   </div>
                 </div>
                 
                 <div class="form-group">
                   <label class="form-label" for="edit-part-logic-family">ロジックファミリ</label>
-                  <input type="text" class="form-input" id="edit-part-logic-family" maxlength="50"
+                  <input type="text" class="form-input" id="edit-part-logic-family" 
+                         maxlength="${CONFIG.LIMITS.ELECTRICAL.LOGIC_FAMILY}"
                          value="${part.logic_family || ''}" placeholder="例: LS, HC, CMOS">
                 </div>
               </div>
@@ -1034,19 +1040,21 @@ function showEditPartDialog(partId) {
               <!-- 物理仕様 -->
               <div class="form-group">
                 <label class="form-label" for="edit-part-package">パッケージ</label>
-                <input type="text" class="form-input" id="edit-part-package" maxlength="20" 
+                <input type="text" class="form-input" id="edit-part-package" 
+                       maxlength="${CONFIG.LIMITS.PACKAGE_MAX}" 
                        value="${part.package || ''}" placeholder="例: DIP-14, SOT-23, 0603">
               </div>
               
               <div class="form-group">
                 <label class="form-label" for="edit-part-description">説明</label>
-                <textarea class="form-textarea" id="edit-part-description" maxlength="200"
+                <textarea class="form-textarea" id="edit-part-description" maxlength="${CONFIG.LIMITS.DESCRIPTION}"
                           placeholder="部品の機能や用途を記載...">${part.description || ''}</textarea>
               </div>
               
               <div class="form-group">
                 <label class="form-label" for="edit-part-datasheet">データシートURL</label>
-                <input type="url" class="form-input" id="edit-part-datasheet" maxlength="255" 
+                <input type="url" class="form-input" id="edit-part-datasheet" 
+                       maxlength="${CONFIG.LIMITS.URL_MAX}" 
                        value="${part.datasheet_url || ''}" placeholder="https://example.com/datasheet.pdf">
               </div>
             </form>
@@ -1062,27 +1070,22 @@ function showEditPartDialog(partId) {
     
     // モーダルをDOMに追加
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    console.log('✅ 編集モーダルをDOMに追加');
     
     // モーダル要素を取得
     const modal = document.getElementById('edit-part-modal');
     if (modal) {
       modal.style.display = 'flex';
-      console.log('✅ 編集モーダルを表示');
       
       // イベントリスナー設定
-      setupEditPartDialogEventsReal(partId, modal);
+      setupEditPartDialogEvents(partId, modal);
       
       // フォーカス設定
       setTimeout(() => {
         const firstInput = modal.querySelector('#edit-part-name');
         if (firstInput) {
           firstInput.focus();
-          console.log('✅ フォーカス設定完了');
         }
       }, 100);
-    } else {
-      console.error('❌ 編集モーダル要素が見つかりません');
     }
     
   } catch (error) {
@@ -1091,8 +1094,8 @@ function showEditPartDialog(partId) {
   }
 }
 
-function setupEditPartDialogEventsReal(partId, modal) {
-  console.log('🔧 編集ダイアログイベント設定開始 (Real版):', partId);
+function setupEditPartDialogEvents(partId, modal) {
+  console.log('🔧 編集ダイアログイベント設定開始:', partId);
   
   if (!modal) {
     console.error('❌ モーダル要素がnullです');
@@ -1103,68 +1106,51 @@ function setupEditPartDialogEventsReal(partId, modal) {
   const saveBtn = document.getElementById('save-edit-btn');
   const closeBtn = modal.querySelector('.modal-close');
   
-  console.log('🔍 ボタン要素確認:');
-  console.log('  - cancelBtn:', !!cancelBtn);
-  console.log('  - saveBtn:', !!saveBtn);
-  console.log('  - closeBtn:', !!closeBtn);
-  
   const closeModal = () => {
-    console.log('❌ 編集モーダルを閉じます (Real版)');
+    console.log('❌ 編集モーダルを閉じます');
     if (modal && modal.parentNode) {
       modal.remove();
-      console.log('✅ 編集モーダルを削除しました (Real版)');
+      console.log('✅ 編集モーダルを削除しました');
     }
   };
   
   // キャンセルボタン
   if (cancelBtn) {
-    console.log('🎯 キャンセルボタンのイベントリスナーを設定');
     cancelBtn.addEventListener('click', (e) => {
-      console.log('🚫 キャンセルボタンクリック (Real版)');
       e.preventDefault();
       e.stopPropagation();
       closeModal();
     });
-  } else {
-    console.error('❌ キャンセルボタンが見つかりません');
   }
   
   // 閉じるボタン
   if (closeBtn) {
-    console.log('🎯 閉じるボタンのイベントリスナーを設定');
     closeBtn.addEventListener('click', (e) => {
-      console.log('❌ 閉じるボタンクリック (Real版)');
       e.preventDefault();
       e.stopPropagation();
       closeModal();
     });
-  } else {
-    console.error('❌ 閉じるボタンが見つかりません');
   }
   
   // モーダル外クリック
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
-      console.log('👆 モーダル外クリック (Real版)');
       closeModal();
     }
   });
   
-  // ESCキー（モーダル固有のハンドラー）
+  // ESCキー
   const escKeyHandler = (e) => {
     if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
-      console.log('⌨️ ESCキー押下 (Real版)');
       closeModal();
       document.removeEventListener('keydown', escKeyHandler);
     }
   };
   document.addEventListener('keydown', escKeyHandler);
   
-  // 保存ボタン
+  // 保存ボタン（全機能対応）
   if (saveBtn) {
-    console.log('🎯 保存ボタンのイベントリスナーを設定');
     saveBtn.addEventListener('click', (e) => {
-      console.log('💾 更新ボタンクリック (Real版)');
       e.preventDefault();
       e.stopPropagation();
       
@@ -1172,23 +1158,24 @@ function setupEditPartDialogEventsReal(partId, modal) {
         saveBtn.disabled = true;
         saveBtn.textContent = '更新中...';
         
-        // データ収集
+        // 🚨 修正：全データ項目（電気特性含む）を収集
         const formData = {
+          // 基本情報
           name: document.getElementById('edit-part-name').value.trim(),
           category_id: parseInt(document.getElementById('edit-part-category').value) || null,
           manufacturer: document.getElementById('edit-part-manufacturer').value.trim() || null,
           part_number: document.getElementById('edit-part-number').value.trim() || null,
           package: document.getElementById('edit-part-package').value.trim() || null,
+          description: document.getElementById('edit-part-description').value.trim() || null,
+          datasheet_url: document.getElementById('edit-part-datasheet').value.trim() || null,
+          
+          // ⚡ 電気特性（完全保持）
           voltage_rating: document.getElementById('edit-part-voltage-rating').value.trim() || null,
           current_rating: document.getElementById('edit-part-current-rating').value.trim() || null,
           power_rating: document.getElementById('edit-part-power-rating').value.trim() || null,
           tolerance: document.getElementById('edit-part-tolerance').value.trim() || null,
-          logic_family: document.getElementById('edit-part-logic-family').value.trim() || null,
-          description: document.getElementById('edit-part-description').value.trim() || null,
-          datasheet_url: document.getElementById('edit-part-datasheet').value.trim() || null
+          logic_family: document.getElementById('edit-part-logic-family').value.trim() || null
         };
-        
-        console.log('📝 フォームデータ:', formData);
         
         // バリデーション
         if (!formData.name || !formData.category_id) {
@@ -1198,7 +1185,7 @@ function setupEditPartDialogEventsReal(partId, modal) {
           return;
         }
 
-        // パーツを更新
+        // パーツを更新（電気特性含む）
         window.db.exec('BEGIN TRANSACTION');
         
         const stmt = window.db.prepare(`
@@ -1238,14 +1225,12 @@ function setupEditPartDialogEventsReal(partId, modal) {
         saveBtn.textContent = '💾 更新';
       }
     });
-  } else {
-    console.error('❌ 保存ボタンが見つかりません');
   }
   
-  console.log('✅ 編集ダイアログイベント設定完了 (Real版)');
+  console.log('✅ 編集ダイアログイベント設定完了');
 }
 
-// ===== グローバル関数登録（使用中のもののみ） =====
+// ===== グローバル関数登録（使用中のものみ） =====
 // メイン機能
 window.showAddPartDialog = showAddPartDialog;
 window.showEditPartDialog = showEditPartDialog;
@@ -1266,9 +1251,9 @@ window.formatStockQuantityEditable = formatStockQuantityEditable;
 window.formatPartName = formatPartName;
 window.createDeleteButton = createDeleteButton;
 
-console.log('✅ part-dialogs.js 軽量版読み込み完了 - 使用中の関数のみ');
-console.log('📊 登録された関数一覧:');
-console.log('  - メイン機能:', ['showAddPartDialog', 'showEditPartDialog', 'showInventoryDialog', 'showDeleteConfirmDialog']);
-console.log('  - データ管理:', ['getAllCategories', 'getPartById', 'deletePart', 'updatePart']);
-console.log('  - UI関連:', ['formatStockQuantityEditable', 'formatPartName', 'createDeleteButton']);
-console.log('🎯 削除された未使用関数:', ['addPart', 'saveNewPart', 'addPartComplete', 'updatePartComplete', 'saveNewPartWithElectricalSpecs', 'createDialogContainer', 'closeDialog', 'setupDialogOverlayClose', 'setupEditPartDialogEventsCompat']);
+console.log('✅ part-dialogs.js 完全版読み込み完了 - 全機能保持 + CONFIG最適化');
+console.log('📊 保持された機能:');
+console.log('  - ✅ 電気特性入力: 耐圧、電流制限、定格電力、誤差、ロジックファミリ');
+console.log('  - ✅ 在庫・購入情報: 在庫数、保管場所、購入日、購入店舗、単価、通貨、メモ');
+console.log('  - ✅ CONFIG定数適用: 全制限値をCONFIG.LIMITSから取得');
+console.log('  - ✅ 全CRUD操作: 追加、編集、削除、在庫管理');

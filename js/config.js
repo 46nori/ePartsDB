@@ -14,23 +14,15 @@ const CONFIG = {
     STOCK_ZERO: 0
   },
   
-  // バリデーション制限
-  VALIDATION: {
-    PART_NAME_MAX: 100,
-    DESCRIPTION_MAX: 200,
-    SEARCH_TERM_MAX: 100,
-    PART_NUMBER_MAX: 50,
-    MANUFACTURER_MAX: 50,
-    PACKAGE_MAX: 20,
-    URL_MAX: 255
-  },
-  
   // UI設定
   UI: {
     DIALOG_LOAD_TIMEOUT: 5000,
     STATUS_AUTO_HIDE: 3000,
     SEARCH_PLACEHOLDER: 'パーツ名、型番、メーカーで検索（空白で全件表示）',
-    SEARCH_HELP_MESSAGE: '検索ワードを入力して「検索」ボタンを押すか、空白で「検索」を押すと全件表示されます。<br><strong>1文字以上で部分一致検索が可能です。</strong>'
+    SEARCH_HELP_MESSAGE: '検索ワードを入力して「検索」ボタンを押すか、空白で「検索」を押すと全件表示されます。<br><strong>1文字以上で部分一致検索が可能です。</strong>',
+    STATUS_CLEAR_DELAY: 3000,  // ステータスメッセージクリア時間
+    DIALOG_TIMEOUT: 500,       // ダイアログアニメーション
+    DEBOUNCE_DELAY: 300        // 検索入力遅延
   },
   
   // 機能フラグ
@@ -78,6 +70,46 @@ const CONFIG = {
     REMOTE_ICON: '🌐',
     LOCAL_TEXT: 'ローカル環境（編集可能）',
     REMOTE_TEXT: 'リモート環境（読み取り専用）'
+  },
+  
+  // ログ制御設定
+  DEBUG: {
+    ENABLED: false, // 本番環境では false、開発時は true
+    LEVELS: ['ERROR', 'WARN', 'INFO', 'DEBUG'],
+    MODULES: {
+      DATABASE: true,
+      DIALOGS: true,
+      APP: true,
+      UTILS: true
+    }
+  },
+  
+  // 🚨 統一：全制限値をLIMITSセクションに統合
+  LIMITS: {
+    // 基本フィールド制限
+    MAX_QUANTITY: 9999,
+    PART_NAME: 100,        // 旧VALIDATION.PART_NAME_MAX
+    MANUFACTURER: 50,      // 旧VALIDATION.MANUFACTURER_MAX
+    PART_NUMBER: 50,       // 旧VALIDATION.PART_NUMBER_MAX
+    DESCRIPTION: 500,      // 旧VALIDATION.DESCRIPTION_MAX（500を採用、より実用的）
+    MEMO: 500,
+    LOCATION: 100,
+    SHOP: 100,
+    MAX_PRICE: 999999.99,
+    
+    // 検索・その他制限
+    SEARCH_TERM_MAX: 100,  // 旧VALIDATION.SEARCH_TERM_MAX
+    PACKAGE_MAX: 20,       // 旧VALIDATION.PACKAGE_MAX
+    URL_MAX: 255,          // 旧VALIDATION.URL_MAX
+    
+    // 電気特性専用制限値
+    ELECTRICAL: {
+      VOLTAGE_RATING: 50,    // 耐圧入力制限
+      CURRENT_RATING: 50,    // 電流制限入力制限
+      POWER_RATING: 50,      // 定格電力入力制限
+      TOLERANCE: 20,         // 誤差入力制限
+      LOGIC_FAMILY: 50       // ロジックファミリ入力制限
+    }
   }
 };
 
