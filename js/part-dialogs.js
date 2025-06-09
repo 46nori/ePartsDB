@@ -1,19 +1,22 @@
-console.log('🔧 part-dialogs.js 統合版読み込み開始 - タイムスタンプ:', new Date().toISOString());
+/* パーツダイアログ統合モジュール */
 
-// ===== カテゴリ取得・管理機能 =====
+AppUtils.log('part-dialogs.js統合版読み込み開始', 'DIALOGS', 'INFO');
+
 function getAllCategories() {
-  console.log('📋 カテゴリ一覧を取得中...');
+  if (CONFIG.DEBUG.ENABLED && CONFIG.DEBUG.MODULES.DIALOGS) {
+    AppUtils.log('カテゴリ一覧取得開始', 'DIALOGS', 'DEBUG');
+  }
   
   try {
     if (!window.db) {
-      console.warn('⚠️ データベースが初期化されていません');
+      AppUtils.log('データベースが初期化されていません', 'DIALOGS', 'WARN');
       return [];
     }
 
     const result = window.db.exec("SELECT id, name FROM categories ORDER BY name");
     
     if (result.length === 0) {
-      console.log('📋 カテゴリテーブルにデータがありません');
+      AppUtils.log('カテゴリテーブルにデータがありません', 'DIALOGS', 'INFO');
       return [];
     }
 
@@ -22,22 +25,22 @@ function getAllCategories() {
       name: row[1]
     }));
 
-    console.log(`✅ データベースからカテゴリを取得しました (${categories.length}件)`, categories);
+    AppUtils.log(`カテゴリ取得完了`, 'DIALOGS', 'DEBUG', { count: categories.length });
     return categories;
     
   } catch (error) {
-    console.error('❌ カテゴリ取得エラー:', error);
+    AppUtils.log('カテゴリ取得エラー', 'DIALOGS', 'ERROR', error);
     return [];
   }
 }
 
 function loadCategoriesForSelect() {
-  console.log('🔍 カテゴリ選択肢を読み込み中...');
+  AppUtils.log('カテゴリ選択肢読み込み開始', 'DIALOGS', 'DEBUG');
   
   const categories = getAllCategories();
   
   if (categories.length === 0) {
-    console.warn('⚠️ カテゴリが見つかりません');
+    AppUtils.log('カテゴリが見つかりません', 'DIALOGS', 'WARN');
     return '';
   }
 
@@ -45,13 +48,12 @@ function loadCategoriesForSelect() {
     `<option value="${category.id}">${category.name}</option>`
   ).join('');
   
-  console.log(`✅ カテゴリ選択肢を読み込みました (${categories.length}件)`);
+  AppUtils.log('カテゴリ選択肢読み込み完了', 'DIALOGS', 'DEBUG', { count: categories.length });
   return options;
 }
 
-// ===== パーツ取得・管理機能 =====
 function getPartById(id) {
-  console.log('🔍 パーツ詳細を取得中:', id);
+  AppUtils.log('パーツ詳細取得開始', 'DIALOGS', 'DEBUG', { partId: id });
   
   try {
     if (!window.db) {
@@ -75,18 +77,17 @@ function getPartById(id) {
       throw new Error(`パーツID ${id} が見つかりません`);
     }
 
-    console.log('✅ パーツ詳細を取得しました:', result);
+    AppUtils.log('パーツ詳細取得完了', 'DIALOGS', 'DEBUG', { partId: id, name: result.name });
     return result;
     
   } catch (error) {
-    console.error('❌ パーツ取得エラー:', error);
+    AppUtils.log('パーツ取得エラー', 'DIALOGS', 'ERROR', { partId: id, error: error.message });
     throw error;
   }
 }
 
-// ===== CRUD操作：削除機能 =====
 function deletePart(partId) {
-  console.log('🗑️ パーツ削除処理開始:', partId);
+  AppUtils.log('パーツ削除処理開始', 'DIALOGS', 'INFO', { partId });
   
   try {
     if (!window.db) {
@@ -110,20 +111,19 @@ function deletePart(partId) {
     }
 
     window.db.exec('COMMIT');
-    console.log(`✅ パーツID ${partId} を削除しました`);
+    AppUtils.log('パーツ削除完了', 'DIALOGS', 'INFO', { partId });
     
     return true;
     
   } catch (error) {
     window.db.exec('ROLLBACK');
-    console.error('❌ パーツ削除エラー:', error);
+    AppUtils.log('パーツ削除エラー', 'DIALOGS', 'ERROR', { partId, error: error.message });
     throw error;
   }
 }
 
-// ===== CRUD操作：更新機能 =====
 function updatePart(partId, data) {
-  console.log('🔄 パーツ更新処理開始:', partId, data);
+  AppUtils.log('パーツ更新処理開始', 'DIALOGS', 'INFO', { partId, name: data.name });
   
   try {
     if (!window.db) {
@@ -165,13 +165,13 @@ function updatePart(partId, data) {
     invStmt.free();
 
     window.db.exec('COMMIT');
-    console.log(`✅ パーツID ${partId} を更新しました`);
+    AppUtils.log('パーツ更新完了', 'DIALOGS', 'INFO', { partId, name: data.name });
     
     return true;
     
   } catch (error) {
     window.db.exec('ROLLBACK');
-    console.error('❌ パーツ更新エラー:', error);
+    AppUtils.log('パーツ更新エラー', 'DIALOGS', 'ERROR', { partId, error: error.message });
     throw error;
   }
 }
@@ -199,7 +199,7 @@ function formatPartName(part) {
 
 // ===== 削除ボタン生成関数 =====
 function createDeleteButton(part) {
-  console.log('🗑️ 削除ボタンを生成:', part.id, part.name);
+  AppUtils.log('削除ボタン生成', 'DIALOGS', 'DEBUG', { partId: part.id, name: part.name });
   
   // HTMLエスケープ処理
   const escapeHtml = (text) => {
@@ -223,14 +223,14 @@ function createDeleteButton(part) {
 
 // ===== ダイアログ：削除確認 =====
 function showDeleteConfirmDialog(partId, partName) {
-  console.log('🗑️ 削除確認ダイアログを表示します:', partId);
+  AppUtils.log('削除確認ダイアログ表示開始', 'DIALOGS', 'INFO', { partId });
   
   try {
     // パーツ情報を取得
     const part = getPartById(partId);
     
     if (!part) {
-      console.error('❌ パーツが見つかりません:', partId);
+      AppUtils.log('削除対象パーツが見つかりません', 'DIALOGS', 'ERROR', { partId });
       alert('削除対象のパーツが見つかりません');
       return;
     }
@@ -296,7 +296,7 @@ function showDeleteConfirmDialog(partId, partName) {
     }
     
   } catch (error) {
-    console.error('❌ 削除確認ダイアログエラー:', error);
+    AppUtils.log('削除確認ダイアログエラー', 'DIALOGS', 'ERROR', { partId, error: error.message });
     alert(`削除確認ダイアログの表示に失敗しました: ${error.message}`);
   }
 }
@@ -308,10 +308,10 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
   const closeBtn = modal.querySelector('.modal-close');
   
   const closeModal = () => {
-    console.log('❌ 削除確認モーダルを閉じます');
+    AppUtils.log('削除確認モーダルを閉じます', 'DIALOGS', 'DEBUG');
     if (modal && modal.parentNode) {
       modal.remove();
-      console.log('✅ 削除確認モーダルを削除しました');
+      AppUtils.log('削除確認モーダル削除完了', 'DIALOGS', 'DEBUG');
     }
   };
   
@@ -357,7 +357,7 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
       // パーツを削除
       deletePart(partId);
       
-      console.log(`✅ パーツ「${partName}」を削除しました`);
+      AppUtils.log('パーツ削除完了（UI操作）', 'DIALOGS', 'INFO', { partId, partName });
       
       // モーダルを閉じる
       closeModal();
@@ -368,19 +368,18 @@ function setupDeleteConfirmDialogEvents(partId, partName) {
       }
       
     } catch (error) {
-      console.error('❌ 削除処理エラー:', error);
+      AppUtils.log('削除処理エラー（UI操作）', 'DIALOGS', 'ERROR', { partId, error: error.message });
       alert(`削除に失敗しました: ${error.message}`);
       confirmBtn.disabled = false;
       confirmBtn.textContent = '🗑️ 削除する';
     }
   });
   
-  console.log('✅ 削除確認ダイアログイベント設定完了 (ESCキー対応済み)');
+  AppUtils.log('削除確認ダイアログイベント設定完了', 'DIALOGS', 'DEBUG');
 }
 
-// ===== ダイアログ：在庫管理（完全版・CONFIG適用） =====
 function showInventoryDialog(partId) {
-  console.log('📦 在庫管理ダイアログを表示します:', partId);
+  AppUtils.log('在庫管理ダイアログ表示開始', 'DIALOGS', 'INFO', { partId });
   
   try {
     const part = getPartById(partId);
@@ -391,7 +390,6 @@ function showInventoryDialog(partId) {
       existingModal.remove();
     }
     
-    // 🚨 修正：CONFIG定数適用 + 全機能保持
     const modalHtml = `
       <div id="inventory-modal" class="modal-overlay">
         <div class="modal">
@@ -483,7 +481,7 @@ function showInventoryDialog(partId) {
     }
     
   } catch (error) {
-    console.error('❌ 在庫管理ダイアログエラー:', error);
+    AppUtils.log('在庫管理ダイアログエラー', 'DIALOGS', 'ERROR', { partId, error: error.message });
     alert(`在庫管理ダイアログの表示に失敗しました: ${error.message}`);
   }
 }
@@ -495,10 +493,10 @@ function setupInventoryDialogEvents(partId) {
   const closeBtn = modal.querySelector('.modal-close');
   
   const closeModal = () => {
-    console.log('❌ 在庫管理モーダルを閉じます');
+    AppUtils.log('在庫管理モーダルを閉じます', 'DIALOGS', 'DEBUG');
     if (modal && modal.parentNode) {
       modal.remove();
-      console.log('✅ 在庫管理モーダルを削除しました');
+      AppUtils.log('在庫管理モーダル削除完了', 'DIALOGS', 'DEBUG');
     }
   };
   
@@ -514,7 +512,7 @@ function setupInventoryDialogEvents(partId) {
   // ESCキーハンドラー
   const escKeyHandler = (e) => {
     if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
-      console.log('⌨️ ESCキー押下 (在庫管理ダイアログ)');
+      AppUtils.log('ESCキー押下（在庫管理ダイアログ）', 'DIALOGS', 'DEBUG');
       closeModal();
       document.removeEventListener('keydown', escKeyHandler);
     }
@@ -532,7 +530,7 @@ function setupInventoryDialogEvents(partId) {
         location: document.getElementById('inventory-location').value.trim() || null,
         purchase_date: document.getElementById('inventory-purchase-date').value.trim() || null,
         shop: document.getElementById('inventory-shop').value.trim() || null,
-        price_per_unit: parseFloat(document.getElementById('inventory-price').value) || null,
+        price_per_unit: document.getElementById('inventory-price').value ? parseFloat(document.getElementById('inventory-price').value) : null,
         currency: document.getElementById('inventory-currency').value.trim() || null,
         memo: document.getElementById('inventory-memo').value.trim() || null
       };
@@ -552,7 +550,7 @@ function setupInventoryDialogEvents(partId) {
       ]);
       stmt.free();
       
-      console.log(`✅ パーツID ${partId} の在庫情報を更新しました`);
+      AppUtils.log('在庫情報更新完了', 'DIALOGS', 'INFO', { partId });
       
       // ビューを更新
       if (typeof window.refreshCurrentView === 'function') {
@@ -563,7 +561,7 @@ function setupInventoryDialogEvents(partId) {
       alert('在庫情報を更新しました');
       
     } catch (error) {
-      console.error('❌ 在庫情報更新エラー:', error);
+      AppUtils.log('在庫情報更新エラー', 'DIALOGS', 'ERROR', { partId, error: error.message });
       alert(`在庫情報の更新に失敗しました: ${error.message}`);
       saveBtn.disabled = false;
       saveBtn.textContent = '💾 保存';
@@ -573,7 +571,7 @@ function setupInventoryDialogEvents(partId) {
 
 // ===== ダイアログ：パーツ追加（完全版・CONFIG適用） =====
 function showAddPartDialog() {
-  console.log('🆕 統合版 showAddPartDialog 実行');
+  AppUtils.log('パーツ追加ダイアログ表示開始', 'DIALOGS', 'INFO');
   
   const categories = getAllCategories();
   
@@ -588,7 +586,6 @@ function showAddPartDialog() {
     existingModal.remove();
   }
   
-  // 🚨 修正：CONFIG定数適用 + 全機能（電気特性・在庫情報）保持
   const modalHtml = `
     <div id="add-part-modal" class="modal-overlay">
       <div class="modal">
@@ -787,10 +784,10 @@ function setupAddPartDialogEvents() {
   const closeBtn = modal.querySelector('.modal-close');
   
   const closeModal = () => {
-    console.log('❌ 追加モーダルを閉じます');
+    AppUtils.log('追加モーダルを閉じます', 'DIALOGS', 'DEBUG');
     if (modal && modal.parentNode) {
       modal.remove();
-      console.log('✅ 追加モーダルを削除しました');
+      AppUtils.log('追加モーダル削除完了', 'DIALOGS', 'DEBUG');
     }
   };
   
@@ -828,7 +825,7 @@ function setupAddPartDialogEvents() {
   };
   document.addEventListener('keydown', escKeyHandler);
   
-  console.log('✅ 追加ダイアログイベント設定完了 (ESCキー対応済み)');
+  AppUtils.log('追加ダイアログイベント設定完了', 'DIALOGS', 'DEBUG');
   
   // 保存処理（全機能対応）
   saveBtn.addEventListener('click', (e) => {
@@ -838,7 +835,6 @@ function setupAddPartDialogEvents() {
       saveBtn.disabled = true;
       saveBtn.textContent = '追加中...';
       
-      // 🚨 修正：全データ項目（電気特性・在庫情報）を収集
       const formData = {
         // 基本情報
         name: document.getElementById('add-part-name').value.trim(),
@@ -861,7 +857,7 @@ function setupAddPartDialogEvents() {
         location: document.getElementById('add-location').value.trim() || null,
         purchase_date: document.getElementById('add-purchase-date').value.trim() || null,
         shop: document.getElementById('add-shop').value.trim() || null,
-        price_per_unit: parseFloat(document.getElementById('add-price').value) || null,
+        price_per_unit: document.getElementById('add-price').value ? parseFloat(document.getElementById('add-price').value) : null,
         currency: document.getElementById('add-currency').value.trim() || null,
         memo: document.getElementById('add-memo').value.trim() || null
       };
@@ -912,7 +908,7 @@ function setupAddPartDialogEvents() {
 
       window.db.exec('COMMIT');
 
-      console.log(`✅ パーツ「${formData.name}」を追加しました (ID: ${partId})`);
+      AppUtils.log('パーツ追加完了', 'DIALOGS', 'INFO', { partId, name: formData.name });
 
       // ビューを更新
       if (typeof window.refreshCurrentView === 'function') {
@@ -924,7 +920,7 @@ function setupAddPartDialogEvents() {
 
     } catch (error) {
       window.db.exec('ROLLBACK');
-      console.error('❌ パーツ追加エラー:', error);
+      AppUtils.log('パーツ追加エラー', 'DIALOGS', 'ERROR', { error: error.message });
       alert(`パーツの追加に失敗しました: ${error.message}`);
       saveBtn.disabled = false;
       saveBtn.textContent = '🔧 追加';
@@ -932,9 +928,8 @@ function setupAddPartDialogEvents() {
   });
 }
 
-// ===== ダイアログ：パーツ編集（完全版・CONFIG適用） =====
 function showEditPartDialog(partId) {
-  console.log('🔧 パーツ編集ダイアログを表示します:', partId);
+  AppUtils.log('パーツ編集ダイアログ表示開始', 'DIALOGS', 'INFO', { partId });
   
   try {
     const part = getPartById(partId);
@@ -951,7 +946,6 @@ function showEditPartDialog(partId) {
       existingModal.remove();
     }
     
-    // 🚨 修正：CONFIG定数適用 + 全機能（電気特性）保持
     const modalHtml = `
       <div id="edit-part-modal" class="modal-overlay">
         <div class="modal">
@@ -1089,16 +1083,16 @@ function showEditPartDialog(partId) {
     }
     
   } catch (error) {
-    console.error('❌ パーツ編集ダイアログエラー:', error);
+    AppUtils.log('パーツ編集ダイアログエラー', 'DIALOGS', 'ERROR', { partId, error: error.message });
     alert(`パーツ編集ダイアログの表示に失敗しました: ${error.message}`);
   }
 }
 
 function setupEditPartDialogEvents(partId, modal) {
-  console.log('🔧 編集ダイアログイベント設定開始:', partId);
+  AppUtils.log('編集ダイアログイベント設定開始', 'DIALOGS', 'DEBUG', { partId });
   
   if (!modal) {
-    console.error('❌ モーダル要素がnullです');
+    AppUtils.log('モーダル要素がnullです', 'DIALOGS', 'ERROR', { partId });
     return;
   }
   
@@ -1107,10 +1101,10 @@ function setupEditPartDialogEvents(partId, modal) {
   const closeBtn = modal.querySelector('.modal-close');
   
   const closeModal = () => {
-    console.log('❌ 編集モーダルを閉じます');
+    AppUtils.log('編集モーダルを閉じます', 'DIALOGS', 'DEBUG');
     if (modal && modal.parentNode) {
       modal.remove();
-      console.log('✅ 編集モーダルを削除しました');
+      AppUtils.log('編集モーダル削除完了', 'DIALOGS', 'DEBUG');
     }
   };
   
@@ -1158,23 +1152,20 @@ function setupEditPartDialogEvents(partId, modal) {
         saveBtn.disabled = true;
         saveBtn.textContent = '更新中...';
         
-        // 🚨 修正：全データ項目（電気特性含む）を収集
+        // フォームデータ収集
         const formData = {
-          // 基本情報
           name: document.getElementById('edit-part-name').value.trim(),
           category_id: parseInt(document.getElementById('edit-part-category').value) || null,
           manufacturer: document.getElementById('edit-part-manufacturer').value.trim() || null,
           part_number: document.getElementById('edit-part-number').value.trim() || null,
           package: document.getElementById('edit-part-package').value.trim() || null,
-          description: document.getElementById('edit-part-description').value.trim() || null,
-          datasheet_url: document.getElementById('edit-part-datasheet').value.trim() || null,
-          
-          // ⚡ 電気特性（完全保持）
           voltage_rating: document.getElementById('edit-part-voltage-rating').value.trim() || null,
           current_rating: document.getElementById('edit-part-current-rating').value.trim() || null,
           power_rating: document.getElementById('edit-part-power-rating').value.trim() || null,
           tolerance: document.getElementById('edit-part-tolerance').value.trim() || null,
-          logic_family: document.getElementById('edit-part-logic-family').value.trim() || null
+          logic_family: document.getElementById('edit-part-logic-family').value.trim() || null,
+          description: document.getElementById('edit-part-description').value.trim() || null,
+          datasheet_url: document.getElementById('edit-part-datasheet').value.trim() || null
         };
         
         // バリデーション
@@ -1184,42 +1175,22 @@ function setupEditPartDialogEvents(partId, modal) {
           saveBtn.textContent = '💾 更新';
           return;
         }
-
-        // パーツを更新（電気特性含む）
-        window.db.exec('BEGIN TRANSACTION');
         
-        const stmt = window.db.prepare(`
-          UPDATE parts SET 
-            name = ?, category_id = ?, manufacturer = ?, part_number = ?,
-            package = ?, voltage_rating = ?, current_rating = ?, power_rating = ?,
-            tolerance = ?, logic_family = ?, description = ?, datasheet_url = ?,
-            updated_at = datetime('now')
-          WHERE id = ?
-        `);
+        // 更新処理
+        updatePart(partId, formData);
         
-        stmt.run([
-          formData.name, formData.category_id, formData.manufacturer, formData.part_number,
-          formData.package, formData.voltage_rating, formData.current_rating, formData.power_rating,
-          formData.tolerance, formData.logic_family, formData.description, formData.datasheet_url,
-          partId
-        ]);
-        stmt.free();
-
-        window.db.exec('COMMIT');
-
-        console.log(`✅ パーツID ${partId} を更新しました`);
-
+        AppUtils.log('パーツ編集完了（UI操作）', 'DIALOGS', 'INFO', { partId, name: formData.name });
+        
         // ビューを更新
         if (typeof window.refreshCurrentView === 'function') {
           window.refreshCurrentView();
         }
-
+        
         closeModal();
         alert(`パーツ「${formData.name}」を更新しました`);
-
+        
       } catch (error) {
-        window.db.exec('ROLLBACK');
-        console.error('❌ パーツ更新エラー:', error);
+        AppUtils.log('パーツ編集エラー（UI操作）', 'DIALOGS', 'ERROR', { partId, error: error.message });
         alert(`パーツの更新に失敗しました: ${error.message}`);
         saveBtn.disabled = false;
         saveBtn.textContent = '💾 更新';
@@ -1227,7 +1198,7 @@ function setupEditPartDialogEvents(partId, modal) {
     });
   }
   
-  console.log('✅ 編集ダイアログイベント設定完了');
+  AppUtils.log('編集ダイアログイベント設定完了', 'DIALOGS', 'DEBUG', { partId });
 }
 
 // ===== グローバル関数登録（使用中のものみ） =====
@@ -1251,9 +1222,5 @@ window.formatStockQuantityEditable = formatStockQuantityEditable;
 window.formatPartName = formatPartName;
 window.createDeleteButton = createDeleteButton;
 
-console.log('✅ part-dialogs.js 完全版読み込み完了 - 全機能保持 + CONFIG最適化');
-console.log('📊 保持された機能:');
-console.log('  - ✅ 電気特性入力: 耐圧、電流制限、定格電力、誤差、ロジックファミリ');
-console.log('  - ✅ 在庫・購入情報: 在庫数、保管場所、購入日、購入店舗、単価、通貨、メモ');
-console.log('  - ✅ CONFIG定数適用: 全制限値をCONFIG.LIMITSから取得');
-console.log('  - ✅ 全CRUD操作: 追加、編集、削除、在庫管理');
+AppUtils.log('part-dialogs.js 完全版読み込み完了', 'DIALOGS', 'INFO');
+AppUtils.log('保持された機能: 電気特性入力、在庫・購入情報、CONFIG定数適用、全CRUD操作', 'DIALOGS', 'DEBUG');

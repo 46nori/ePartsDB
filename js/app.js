@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   const DB_URL = './eparts.db';
 
-  console.log('🚀 アプリケーション初期化開始');
+  AppUtils.log('アプリケーション初期化開始', 'APP', 'INFO');
 
   // ===== UI管理関数 =====
   
@@ -112,7 +112,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (attempts < maxAttempts) {
           setTimeout(checkFunctions, 100);
         } else {
-          console.warn('⚠️ ダイアログ関数の読み込みタイムアウト');
+          // 🚨 修正3: Line 119
+          AppUtils.log('ダイアログ関数の読み込みタイムアウト', 'APP', 'WARN');
           resolve(false);
         }
       };
@@ -171,14 +172,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if (addPartBtn) {
         // 修正: 直接的なイベント設定
         addPartBtn.onclick = function() {
-          console.log('🔧 パーツ追加ボタンクリック');
+          // 🚨 修正1: Line 170
+          AppUtils.log('パーツ追加ボタンクリック', 'APP', 'DEBUG');
           if (typeof showAddPartDialog === 'function') {
             showAddPartDialog();
           } else {
             alert('パーツ追加機能が読み込まれていません。ページを再読み込みしてください。');
           }
         };
-        console.log('✅ パーツ追加ボタンイベント設定完了');
+        // 🚨 修正2: Line 172
+        AppUtils.log('パーツ追加ボタンイベント設定完了', 'APP', 'DEBUG');
       }
 
       // 他のボタン設定は既存のまま
@@ -274,7 +277,8 @@ document.addEventListener('DOMContentLoaded', function() {
       showStatus('マスターデータベースに戻しました', 'success');
       
     } catch (error) {
-      console.error('リセットエラー:', error);
+      // 🚨 修正4: Line 231
+      AppUtils.log('リセットエラー', 'APP', 'ERROR', { error: error.message });
       showStatus(`リセットに失敗しました: ${error.message}`, 'error');
     }
   }
@@ -362,7 +366,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
     } catch (error) {
-      console.error('❌ カテゴリ表示エラー:', error);
+      // 🚨 修正5: Line 300
+      AppUtils.log('カテゴリ表示エラー', 'APP', 'ERROR', { error: error.message });
       showStatus(`エラー: ${error.message}`, 'error');
     }
   }
@@ -372,7 +377,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const validName = validateInput(categoryName, 'string', 100);
     
     if (validId === 0) {
-      console.error('Invalid category ID');
+      // 🚨 修正6: Line 320
+      AppUtils.log('無効なカテゴリID', 'APP', 'ERROR', { categoryId });
       return;
     }
     
@@ -484,7 +490,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
     } catch (error) {
-      console.error('❌ パーツ表示エラー:', error);
+      // 🚨 修正7: Line 410
+      AppUtils.log('パーツ表示エラー', 'APP', 'ERROR', { categoryId, error: error.message });
       showStatus(`エラー: ${error.message}`, 'error');
     }
   }
@@ -590,7 +597,8 @@ document.addEventListener('DOMContentLoaded', function() {
       displaySearchResults(searchResults, results, searchTerm);
       
     } catch (error) {
-      console.error('❌ 検索結果表示エラー:', error);
+      // 🚨 修正8: Line 520
+      AppUtils.log('検索結果表示エラー', 'APP', 'ERROR', { error: error.message });
       searchResults.innerHTML = `<p class="error">検索中にエラーが発生しました: ${error.message}</p>`;
     }
   }
@@ -682,7 +690,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
     } catch (error) {
-      console.error('❌ 検索結果表示エラー:', error);
+      // 🚨 修正9: Line 600
+      AppUtils.log('検索結果表示エラー', 'APP', 'ERROR', { searchTerm, error: error.message });
       container.innerHTML = `<p class="error">検索結果の表示中にエラーが発生しました: ${error.message}</p>`;
     }
   }
@@ -830,7 +839,8 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStockCellStyle(partId, newQuantity);
       })
       .catch(error => {
-        console.error('❌ 在庫更新エラー:', error);
+        // 🚨 修正10: Line 770
+        AppUtils.log('在庫更新エラー', 'APP', 'ERROR', { partId, newQuantity, error: error.message });
         const currentQtyStmt = db.prepare('SELECT quantity FROM inventory WHERE part_id = ?');
         currentQtyStmt.bind([partId]);
         if (currentQtyStmt.step()) {
@@ -883,7 +893,8 @@ document.addEventListener('DOMContentLoaded', function() {
     statusElement.textContent = 'SQL.jsライブラリを読み込み中...';
     
     if (typeof initSqlJs === 'undefined') {
-      console.error('❌ initSqlJs未定義');
+      // 🚨 修正11: Line 830
+      AppUtils.log('initSqlJs未定義', 'APP', 'ERROR');
       statusElement.textContent = 'エラー: SQL.jsライブラリが読み込まれていません';
       statusElement.className = 'status error';
       return;
@@ -938,7 +949,8 @@ document.addEventListener('DOMContentLoaded', function() {
       showCategories();
     })
     .catch(error => {
-      console.error('❌ データベース初期化エラー:', error);
+      // 🚨 修正12: Line 860
+      AppUtils.log('データベース初期化エラー', 'APP', 'ERROR', { error: error.message });
       statusElement.textContent = `エラー: ${error.message}`;
       statusElement.className = 'status error';
     });
@@ -979,7 +991,8 @@ document.addEventListener('DOMContentLoaded', function() {
       } else if (attempts < maxAttempts) {
         setTimeout(checkAppState, 100);
       } else {
-        console.warn('⚠️ AppState読み込みタイムアウト - 初期化を続行');
+        // 🚨 修正13: Line 920
+        AppUtils.log('AppState読み込みタイムアウト - 初期化を続行', 'APP', 'WARN');
         initDb();
       }
     };
@@ -988,4 +1001,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
-console.log('✅ ePartsDB app.js loaded successfully');
+// 🚨 修正14: Line 最終行
+AppUtils.log('ePartsDB app.js読み込み完了', 'APP', 'INFO');

@@ -1,6 +1,6 @@
 /* ローカルデータベース操作モジュール */
 
-console.log('✅ local-database.js loaded successfully');
+AppUtils.log('local-database.js読み込み完了', 'DATABASE', 'INFO');
 
 // ===== データベース初期化 =====
 window.initializeDatabase = function() {
@@ -11,10 +11,7 @@ window.initializeDatabase = function() {
 // ===== CRUD操作 =====
 // パーツ追加
 window.addPart = function(partData) {
-  // 🚨 修正：ログ最適化
-  if (CONFIG.DEBUG.ENABLED && CONFIG.DEBUG.MODULES.DATABASE) {
-    console.log('🔧 パーツ追加処理開始:', { name: partData.name, category_id: partData.category_id });
-  }
+  AppUtils.log('パーツ追加処理開始', 'DATABASE', 'DEBUG', { name: partData.name, category_id: partData.category_id });
   
   return new Promise((resolve, reject) => {
     try {
@@ -60,7 +57,8 @@ window.addPart = function(partData) {
       invStmt.free();
 
       window.db.exec('COMMIT');
-      console.log(`✅ パーツ「${partData.name}」を追加しました (ID: ${partId})`);
+      
+      AppUtils.log('パーツ追加完了', 'DATABASE', 'INFO', { partId, name: partData.name });
       
       // 変更を追跡
       if (typeof window.trackLocalChange === 'function') {
@@ -88,10 +86,11 @@ window.addPart = function(partData) {
           window.db.exec('ROLLBACK');
         }
       } catch (rollbackError) {
-        console.error('ロールバックエラー:', rollbackError);
+        AppUtils.log('ロールバックエラー', 'DATABASE', 'ERROR', { error: rollbackError.message });
       }
       
-      console.error('パーツ追加エラー:', error);
+      AppUtils.log('パーツ追加エラー', 'DATABASE', 'ERROR', { error: error.message });
+      
       reject(new Error(`パーツの追加に失敗しました: ${error.message}`));
     }
   });
@@ -99,10 +98,7 @@ window.addPart = function(partData) {
 
 // パーツ更新
 window.updatePart = function(partId, partData) {
-  // 🚨 修正：ログ最適化
-  if (CONFIG.DEBUG.ENABLED && CONFIG.DEBUG.MODULES.DATABASE) {
-    console.log('🔄 パーツ更新処理開始:', { partId, name: partData.name });
-  }
+  AppUtils.log('パーツ更新処理開始', 'DATABASE', 'DEBUG', { partId, name: partData.name });
   
   return new Promise((resolve, reject) => {
     try {
@@ -154,7 +150,8 @@ window.updatePart = function(partId, partData) {
       }
 
       window.db.exec('COMMIT');
-      console.log(`✅ パーツID ${partId} を更新しました`);
+      
+      AppUtils.log('パーツ更新完了', 'DATABASE', 'INFO', { partId, name: partData.name });
       
       // 変更を追跡
       if (typeof window.trackLocalChange === 'function') {
@@ -176,7 +173,8 @@ window.updatePart = function(partId, partData) {
       resolve();
       
     } catch (error) {
-      console.error('パーツ更新エラー:', error);
+      AppUtils.log('パーツ更新エラー', 'DATABASE', 'ERROR', { partId, error: error.message });
+      
       reject(new Error(`パーツの更新に失敗しました: ${error.message}`));
     }
   });
@@ -184,10 +182,7 @@ window.updatePart = function(partId, partData) {
 
 // パーツ削除
 window.deletePart = function(partId) {
-  // 🚨 修正：ログ最適化
-  if (CONFIG.DEBUG.ENABLED && CONFIG.DEBUG.MODULES.DATABASE) {
-    console.log('🗑️ パーツ削除処理開始:', { partId });
-  }
+  AppUtils.log('パーツ削除処理開始', 'DATABASE', 'DEBUG', { partId });
   
   return new Promise((resolve, reject) => {
     try {
@@ -223,7 +218,8 @@ window.deletePart = function(partId) {
       }
 
       window.db.exec('COMMIT');
-      console.log(`✅ パーツID ${partId} を削除しました`);
+      
+      AppUtils.log('パーツ削除完了', 'DATABASE', 'INFO', { partId, name: partName });
       
       // 変更を追跡
       if (typeof window.trackLocalChange === 'function') {
@@ -251,10 +247,11 @@ window.deletePart = function(partId) {
           window.db.exec('ROLLBACK');
         }
       } catch (rollbackError) {
-        console.error('ロールバックエラー:', rollbackError);
+        AppUtils.log('ロールバックエラー', 'DATABASE', 'ERROR', { error: rollbackError.message });
       }
       
-      console.error('パーツ削除エラー:', error);
+      AppUtils.log('パーツ削除エラー', 'DATABASE', 'ERROR', { partId, error: error.message });
+      
       reject(new Error(`パーツの削除に失敗しました: ${error.message}`));
     }
   });
@@ -262,10 +259,7 @@ window.deletePart = function(partId) {
 
 // 在庫更新関数（修正版）
 window.updateInventory = function(partId, newQuantity) {
-  // 🚨 修正：ログ最適化
-  if (CONFIG.DEBUG.ENABLED && CONFIG.DEBUG.MODULES.DATABASE) {
-    console.log('📦 在庫更新処理開始:', { partId, newQuantity });
-  }
+  AppUtils.log('在庫更新処理開始', 'DATABASE', 'DEBUG', { partId, newQuantity });
   
   return new Promise((resolve, reject) => {
     try {
@@ -274,78 +268,83 @@ window.updateInventory = function(partId, newQuantity) {
         return;
       }
 
-      // パーツ名を取得（エラーメッセージ用）
-      let partName = `パーツID ${partId}`;
       try {
-        const nameStmt = window.db.prepare('SELECT name FROM parts WHERE id = ?');
-        nameStmt.bind([partId]);
-        if (nameStmt.step()) {
-          partName = nameStmt.get()[0] || partName;
-        }
-        nameStmt.free();
-      } catch (error) {
-        console.warn('パーツ名取得エラー:', error);
-      }
-
-      // 修正版: 明示的な存在チェックとUPSERT処理
-      const checkSql = 'SELECT COUNT(*) as count FROM inventory WHERE part_id = ?';
-      const checkStmt = window.db.prepare(checkSql);
-      checkStmt.bind([partId]);
-      checkStmt.step();
-      const exists = checkStmt.get()[0] > 0;
-      checkStmt.free();
-
-      let stmt;
-      if (exists) {
-        // 既存レコードの更新
-        const updateSql = 'UPDATE inventory SET quantity = ? WHERE part_id = ?';
-        stmt = window.db.prepare(updateSql);
-        stmt.bind([newQuantity, partId]);
-      } else {
-        // 新規レコードの挿入
-        const insertSql = 'INSERT INTO inventory (part_id, quantity) VALUES (?, ?)';
-        stmt = window.db.prepare(insertSql);
-        stmt.bind([partId, newQuantity]);
-      }
-      
-      stmt.run();
-      stmt.free();
-      
-      console.log(`✅ 在庫更新成功: ${partName} → ${newQuantity}個`);
-      
-      // 変更を追跡
-      if (typeof window.trackLocalChange === 'function') {
-        window.trackLocalChange('inventory', { 
-          id: partId, 
-          name: partName, 
-          quantity: newQuantity,
-          action: exists ? 'updated' : 'inserted'
-        });
-      }
-      
-      // 直接呼び出し
-      if (typeof window.refreshCurrentView === 'function') {
-        window.refreshCurrentView();
-      }
-      
-      // 🚨 修正：定数外部化
-      const statusElement = document.getElementById('status');
-      if (statusElement) {
-        statusElement.textContent = `「${partName}」の在庫を${newQuantity}個に更新しました`;
-        statusElement.className = 'status';
-        
-        // 定数化されたクリア時間
-        setTimeout(() => {
-          if (statusElement.textContent.includes(partName)) {
-            statusElement.textContent = 'データベースの読み込みが完了しました。';
+        // パーツ名を取得（エラーメッセージ用）
+        let partName = `パーツID ${partId}`;
+        try {
+          const nameStmt = window.db.prepare('SELECT name FROM parts WHERE id = ?');
+          nameStmt.bind([partId]);
+          if (nameStmt.step()) {
+            partName = nameStmt.get()[0] || partName;
           }
-        }, CONFIG.UI.STATUS_CLEAR_DELAY);
+          nameStmt.free();
+        } catch (error) {
+          AppUtils.log('パーツ名取得エラー', 'DATABASE', 'WARN', { partId, error: error.message });
+        }
+        
+        // 修正版: 明示的な存在チェックとUPSERT処理
+        const checkSql = 'SELECT COUNT(*) as count FROM inventory WHERE part_id = ?';
+        const checkStmt = window.db.prepare(checkSql);
+        checkStmt.bind([partId]);
+        checkStmt.step();
+        const exists = checkStmt.get()[0] > 0;
+        checkStmt.free();
+
+        let stmt;
+        if (exists) {
+          // 既存レコードの更新
+          const updateSql = 'UPDATE inventory SET quantity = ? WHERE part_id = ?';
+          stmt = window.db.prepare(updateSql);
+          stmt.bind([newQuantity, partId]);
+        } else {
+          // 新規レコードの挿入
+          const insertSql = 'INSERT INTO inventory (part_id, quantity) VALUES (?, ?)';
+          stmt = window.db.prepare(insertSql);
+          stmt.bind([partId, newQuantity]);
+        }
+        
+        stmt.run();
+        stmt.free();
+        
+        AppUtils.log('在庫更新完了', 'DATABASE', 'INFO', { partId, partName, newQuantity });
+        
+        // 変更を追跡
+        if (typeof window.trackLocalChange === 'function') {
+          window.trackLocalChange('inventory', { 
+            id: partId, 
+            name: partName, 
+            quantity: newQuantity,
+            action: exists ? 'updated' : 'inserted'
+          });
+        }
+        
+        // 直接呼び出し
+        if (typeof window.refreshCurrentView === 'function') {
+          window.refreshCurrentView();
+        }
+        
+        const statusElement = document.getElementById('status');
+        if (statusElement) {
+          statusElement.textContent = `「${partName}」の在庫を${newQuantity}個に更新しました`;
+          statusElement.className = 'status';
+          
+          // 定数化されたクリア時間
+          setTimeout(() => {
+            if (statusElement.textContent.includes(partName)) {
+              statusElement.textContent = 'データベースの読み込みが完了しました。';
+            }
+          }, CONFIG.UI.STATUS_CLEAR_DELAY);
+        }
+        
+        resolve();
+      } catch (error) {
+        AppUtils.log('在庫更新エラー（内部）', 'DATABASE', 'ERROR', { partId, error: error.message });
+        
+        reject(new Error(`在庫の更新に失敗しました: ${error.message}`));
       }
-      
-      resolve();
-      
     } catch (error) {
-      console.error('❌ 在庫更新エラー:', error);
+      AppUtils.log('在庫更新エラー（外部）', 'DATABASE', 'ERROR', { partId, error: error.message });
+    
       reject(new Error(`在庫の更新に失敗しました: ${error.message}`));
     }
   });
@@ -381,7 +380,8 @@ window.getPartById = function(partId) {
       }
       
     } catch (error) {
-      console.error('パーツ取得エラー:', error);
+      AppUtils.log('パーツ取得エラー', 'DATABASE', 'ERROR', { partId, error: error.message });
+      
       reject(new Error(`パーツ情報の取得に失敗しました: ${error.message}`));
     }
   });

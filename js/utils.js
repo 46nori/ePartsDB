@@ -55,7 +55,8 @@ class AppUtils {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    console.log('🌐 環境判定 (CONFIG連携):', { hostname, protocol });
+    // 🚨 修正: 統一ログシステムを使用
+    AppUtils.log(`環境判定開始`, 'UTILS', 'DEBUG', { hostname, protocol });
     
     // CONFIG.LOCAL_HOSTSを活用（フォールバック付き）
     const LOCAL_HOSTS = (typeof CONFIG !== 'undefined' && CONFIG.LOCAL_HOSTS) ? 
@@ -73,7 +74,9 @@ class AppUtils {
     const isFileProtocol = protocol === 'file:';
     
     const result = isLocalHost || isFileProtocol;
-    console.log('判定結果:', result ? 'ローカル' : 'リモート');
+    
+    // 🚨 修正: 統一ログシステムを使用
+    AppUtils.log(`環境判定完了: ${result ? 'ローカル' : 'リモート'}`, 'UTILS', 'INFO');
     
     return result;
   }
@@ -85,8 +88,6 @@ class AppUtils {
    * @returns {string} フォーマット済みHTML
    */
   static formatPartName(name, datasheetUrl) {
-    // ❌ 修正前: this.escapeHtml(name || '');
-    // ✅ 修正後: AppUtils.escapeHtml(name || '');
     const partName = AppUtils.escapeHtml(name || '');
     
     if (datasheetUrl && datasheetUrl.trim() !== '') {
@@ -212,52 +213,74 @@ class AppUtils {
   }
   
   /**
-   * デバッグ用ログ
-   * @param {string} message - メッセージ
-   * @param {string} context - コンテキスト
-   * @param {any} data - 追加データ
+   * 統一ログ出力システム
+   * @param {string} message - ログメッセージ
+   * @param {string} module - モジュール名（DATABASE, DIALOGS, APP, UTILS）
+   * @param {string} level - ログレベル（ERROR, WARN, INFO, DEBUG）
+   * @param {*} data - 追加データ（オプション）
    */
-  static log(message, context = 'App', data = null) {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] [${context}] ${message}`;
+  static log(message, module = 'APP', level = 'INFO', data = null) {
+    // CONFIG が利用できない場合は通常のconsole.logにフォールバック
+    if (typeof CONFIG === 'undefined' || !CONFIG.DEBUG) {
+      console.log(`[${module}] ${message}`, data || '');
+      return;
+    }
     
-    if (data) {
-      console.log(logMessage, data);
+    // デバッグが無効、または対象モジュールが無効の場合は出力しない
+    if (!CONFIG.DEBUG.ENABLED || !CONFIG.DEBUG.MODULES[module]) {
+      return;
+    }
+    
+    // ログレベルが設定に含まれていない場合は出力しない
+    if (!CONFIG.DEBUG.LEVELS.includes(level)) {
+      return;
+    }
+    
+    // ログレベルに応じたアイコンと色分け
+    const icons = {
+      'ERROR': '❌',
+      'WARN': '⚠️',
+      'INFO': 'ℹ️',
+      'DEBUG': '🔍'
+    };
+    
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const icon = icons[level] || 'ℹ️';
+    const prefix = `${icon} [${timestamp}] ${module}`;
+    
+    // データがある場合は一緒に出力
+    if (data !== null) {
+      console.log(`${prefix}: ${message}`, data);
     } else {
-      console.log(logMessage);
+      console.log(`${prefix}: ${message}`);
     }
   }
   
   /**
-   * エラーログ
-   * @param {Error|string} error - エラー
-   * @param {string} context - コンテキスト
+   * エラーログ専用ショートカット
    */
-  static logError(error, context = 'App') {
-    const timestamp = new Date().toISOString();
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[${timestamp}] [${context}] ERROR: ${errorMessage}`, error);
+  static logError(message, module = 'APP', data = null) {
+    this.log(message, module, 'ERROR', data);
   }
   
   /**
-   * 警告ログ
-   * @param {string} message - 警告メッセージ
-   * @param {string} context - コンテキスト
+   * 警告ログ専用ショートカット
    */
-  static logWarn(message, context = 'App') {
-    const timestamp = new Date().toISOString();
-    console.warn(`[${timestamp}] [${context}] WARN: ${message}`);
+  static logWarn(message, module = 'APP', data = null) {
+    this.log(message, module, 'WARN', data);
+  }
+  
+  /**
+   * デバッグログ専用ショートカット
+   */
+  static logDebug(message, module = 'APP', data = null) {
+    this.log(message, module, 'DEBUG', data);
   }
 }
 
-// グローバル公開（後方互換性のため）
+// 🚨 グローバル関数整理: AppUtilsクラスのみをグローバル公開
 window.AppUtils = AppUtils;
-window.escapeHtml = AppUtils.escapeHtml;
-window.validateInput = AppUtils.validateInput;
-window.formatPartName = AppUtils.formatPartName;
-window.formatStockQuantityEditable = (qty, partId) => AppUtils.formatStockQuantity(qty, partId, true);
-window.formatStockQuantity = AppUtils.formatStockQuantityReadOnly;
-window.getCellValue = AppUtils.getCellValue;
-window.updateStockCellStyle = AppUtils.updateStockCellStyle;
 
-console.log('✅ AppUtils class loaded successfully');
+// 🚨 修正: 統一ログシステムを使用
+AppUtils.log('AppUtils class loaded successfully (ログ最適化版)', 'UTILS', 'INFO');
+AppUtils.log('使用方法: AppUtils.escapeHtml(), AppUtils.log() など', 'UTILS', 'DEBUG');
