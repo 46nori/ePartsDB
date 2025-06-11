@@ -922,7 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(buffer => {
       originalDb = new window.SQLInstance.Database(new Uint8Array(buffer));
       
-      // 🔧 修正: window.originalDbを設定
+      // 🔧 修正: この1行を追加
       window.originalDb = originalDb;
       
       if (isLocalEnvironment) {
