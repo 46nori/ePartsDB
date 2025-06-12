@@ -65,32 +65,33 @@ class SyncManager {
       
       // 4. ファイルダウンロード
       await this.downloadAsEpartsDb(newMasterDb);
-      
+
+      AppUtils.log('ファイルダウンロード完了', 'SYNC', 'INFO');
+
       // 5. 状態クリア（既存APIを利用）
       state.clearChanges();
-      
+      AppUtils.log('状態クリア完了', 'SYNC', 'DEBUG');
+
       // 6. UI更新（既存機能を利用）
       if (typeof window.refreshCurrentView === 'function') {
         window.refreshCurrentView();
       }
-      
+
+      // 状態更新（統合）
+      setTimeout(() => {
+        this.forceUpdateSyncState();
+      }, 100);
+
       AppUtils.log('同期完了', 'SYNC', 'INFO', { totalChanges: stats.total });
       
-      // 7. 完了メッセージ
-      alert(`同期が完了しました！
-
-📊 変更統計:
-• パーツ追加: ${stats.added}件
-• パーツ編集: ${stats.modified}件  
-• パーツ削除: ${stats.deleted}件
-• 在庫更新: ${stats.inventory}件
-
-📋 次の手順:
-1. 新しいeparts.dbがダウンロードされました
-2. プロジェクトフォルダで既存ファイルを置き換えてください
-3. ページを再読み込みして変更を確認してください`);
-      
     } catch (error) {
+      // 🔧 修正: キャンセル時の特別処理
+      if (error.message === 'SYNC_CANCELLED') {
+        AppUtils.log('同期キャンセル（ファイル保存時）', 'SYNC', 'INFO');
+        // キャンセル時は何もしない - 状態も変更データも保持
+        return;
+      }
+      
       AppUtils.log('同期エラー', 'SYNC', 'ERROR', { error: error.message });
       alert(`同期に失敗しました: ${error.message}`);
     }
@@ -224,31 +225,28 @@ class SyncManager {
       
       // 1. 削除処理（先に実行）
       if (changes.deleted && changes.deleted.length > 0) {
-        AppUtils.log(`削除処理開始: ${changes.deleted.length}件`, 'SYNC', 'DEBUG');
+        AppUtils.log(`削除処理開始: ${changes.deleted.length}件`, 'SYNC', 'INFO');
         
         for (const item of changes.deleted) {
-          AppUtils.log('削除処理', 'SYNC', 'DEBUG', { id: item.id, name: item.name });
-          
-          // 在庫削除
+          // 在庫削除 → パーツ削除の順序で実行
           const invDelStmt = newMasterDb.prepare('DELETE FROM inventory WHERE part_id = ?');
           invDelStmt.run([item.id]);
           invDelStmt.free();
           
-          // パーツ削除
           const partDelStmt = newMasterDb.prepare('DELETE FROM parts WHERE id = ?');
           partDelStmt.run([item.id]);
           partDelStmt.free();
         }
         
-        AppUtils.log('削除処理完了', 'SYNC', 'DEBUG');
+        AppUtils.log(`削除処理完了: ${changes.deleted.length}件`, 'SYNC', 'INFO');
       }
       
       // 2. 追加処理
       if (changes.added && changes.added.length > 0) {
-        AppUtils.log(`追加処理開始: ${changes.added.length}件`, 'SYNC', 'DEBUG');
+        AppUtils.log(`追加処理開始: ${changes.added.length}件`, 'SYNC', 'INFO');
         
         for (const item of changes.added) {
-          AppUtils.log('追加処理', 'SYNC', 'DEBUG', { name: item.name });
+          AppUtils.log('パーツ追加実行', 'SYNC', 'INFO', { name: item.name });
           
           // 新しいIDを取得
           const maxIdResult = newMasterDb.exec('SELECT COALESCE(MAX(id), 0) + 1 as new_id FROM parts');
@@ -306,10 +304,10 @@ class SyncManager {
       
       // 3. 更新処理
       if (changes.modified && changes.modified.length > 0) {
-        AppUtils.log(`更新処理開始: ${changes.modified.length}件`, 'SYNC', 'DEBUG');
+        AppUtils.log(`更新処理開始: ${changes.modified.length}件`, 'SYNC', 'INFO');
         
         for (const item of changes.modified) {
-          AppUtils.log('更新処理', 'SYNC', 'DEBUG', { id: item.id, name: item.changes.name });
+          AppUtils.log('パーツ更新実行', 'SYNC', 'INFO', { id: item.id, name: item.changes.name });
           
           const updateStmt = newMasterDb.prepare(`
             UPDATE parts SET 
@@ -319,20 +317,20 @@ class SyncManager {
             WHERE id = ?
           `);
           
-          const changes_data = item.changes;
+          const modifiedData = item.changes;  // より明確な命名
           updateStmt.run([
-            changes_data.name, 
-            changes_data.category_id, 
-            changes_data.manufacturer || null,
-            changes_data.part_number || null, 
-            changes_data.package || null, 
-            changes_data.voltage_rating || null,
-            changes_data.current_rating || null, 
-            changes_data.power_rating || null, 
-            changes_data.tolerance || null,
-            changes_data.logic_family || null, 
-            changes_data.description || null, 
-            changes_data.datasheet_url || null,
+            modifiedData.name, 
+            modifiedData.category_id, 
+            modifiedData.manufacturer || null,
+            modifiedData.part_number || null, 
+            modifiedData.package || null, 
+            modifiedData.voltage_rating || null,
+            modifiedData.current_rating || null, 
+            modifiedData.power_rating || null, 
+            modifiedData.tolerance || null,
+            modifiedData.logic_family || null, 
+            modifiedData.description || null, 
+            modifiedData.datasheet_url || null,
             item.id
           ]);
           updateStmt.free();
@@ -343,35 +341,24 @@ class SyncManager {
       
       // 4. 在庫更新処理
       if (changes.inventory && changes.inventory.length > 0) {
-        AppUtils.log(`在庫更新処理開始: ${changes.inventory.length}件`, 'SYNC', 'DEBUG');
+        AppUtils.log(`在庫更新処理開始: ${changes.inventory.length}件`, 'SYNC', 'INFO');
         
         for (const item of changes.inventory) {
-          AppUtils.log('在庫更新処理', 'SYNC', 'DEBUG', { 
+          AppUtils.log('在庫更新実行', 'SYNC', 'INFO', { 
             partId: item.part_id, 
             quantity: item.new_quantity 
           });
           
-          // 既存在庫チェック
-          const checkStmt = newMasterDb.prepare('SELECT COUNT(*) FROM inventory WHERE part_id = ?');
-          checkStmt.bind([item.part_id]);
-          checkStmt.step();
-          const exists = checkStmt.get()[0] > 0;
-          checkStmt.free();
-          
-          if (exists) {
-            // 在庫更新
-            const updateStmt = newMasterDb.prepare('UPDATE inventory SET quantity = ? WHERE part_id = ?');
-            updateStmt.run([item.new_quantity, item.part_id]);
-            updateStmt.free();
-          } else {
-            // 在庫追加
-            const insertStmt = newMasterDb.prepare('INSERT INTO inventory (part_id, quantity) VALUES (?, ?)');
-            insertStmt.run([item.part_id, item.new_quantity]);
-            insertStmt.free();
-          }
+          // 🔧 改善: UPSERTで1クエリに最適化
+          const upsertStmt = newMasterDb.prepare(`
+            INSERT INTO inventory (part_id, quantity) VALUES (?, ?)
+            ON CONFLICT(part_id) DO UPDATE SET quantity = excluded.quantity
+          `);
+          upsertStmt.run([item.part_id, item.new_quantity]);
+          upsertStmt.free();
         }
         
-        AppUtils.log('在庫更新処理完了', 'SYNC', 'DEBUG');
+        AppUtils.log('在庫更新処理完了', 'SYNC', 'INFO');
       }
       
       newMasterDb.exec('COMMIT');
@@ -396,19 +383,64 @@ class SyncManager {
   
   /**
    * eparts.dbとしてダウンロード
-   * ブラウザの標準ダウンロードAPI使用
+   * File System Access API優先、Safari対応フォールバック
+   * CONFIG統合版
    */
   static async downloadAsEpartsDb(database) {
     AppUtils.log('ファイルダウンロード開始', 'SYNC', 'INFO');
     
     try {
       const data = database.export();
+      
+      // CONFIG からファイル名を取得
+      const fileName = CONFIG.DATABASE.URL.replace('./', ''); // 'eparts.db'
+      
+      // File System Access API対応（Chrome/Edge）
+      if ('showSaveFilePicker' in window) {
+        try {
+          AppUtils.log('File System Access API使用', 'SYNC', 'DEBUG');
+          
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: fileName,  // CONFIG参照
+            types: [{
+              description: 'SQLite Database Files',
+              accept: {
+                'application/x-sqlite3': ['.db'],
+                'application/octet-stream': ['.db']
+              }
+            }],
+            excludeAcceptAllOption: true
+          });
+          
+          const writable = await fileHandle.createWritable();
+          await writable.write(data);
+          await writable.close();
+          
+          AppUtils.log('File System Access API保存完了', 'SYNC', 'INFO');
+          return;
+          
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            AppUtils.log('ファイル保存キャンセル', 'SYNC', 'INFO');
+            // 🔧 修正: キャンセル専用エラーをthrow
+            throw new Error('SYNC_CANCELLED');
+          }
+          
+          AppUtils.log('File System Access API失敗、フォールバック', 'SYNC', 'WARN', { 
+            error: error.message 
+          });
+        }
+      }
+      
+      // Safari/Firefox用フォールバック
+      AppUtils.log('従来ダウンロード方式使用', 'SYNC', 'DEBUG');
+      
       const blob = new Blob([data], { type: 'application/x-sqlite3' });
       const url = URL.createObjectURL(blob);
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'eparts.db';
+      a.download = fileName;  // CONFIG参照
       a.style.display = 'none';
       
       document.body.appendChild(a);
@@ -417,11 +449,42 @@ class SyncManager {
       
       URL.revokeObjectURL(url);
       
-      AppUtils.log('ファイルダウンロード完了', 'SYNC', 'INFO');
+      AppUtils.log('ファイルダウンロード完了（従来方式）', 'SYNC', 'INFO');
       
     } catch (error) {
       AppUtils.log('ファイルダウンロードエラー', 'SYNC', 'ERROR', { error: error.message });
       throw error;
+    }
+  }
+  
+  /**
+   * 強制的な同期ボタン・状態更新
+   */
+  static forceUpdateSyncState() {
+    try {
+      // 1. 同期ボタンの強制無効化
+      const syncBtn = document.getElementById('sync-btn');
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.textContent = '🔄 同期';
+        syncBtn.classList.remove('has-changes');
+      }
+      
+      // 2. 変更インジケーターの強制非表示
+      const changeIndicators = document.querySelectorAll('.change-indicator, .sync-indicator');
+      changeIndicators.forEach(indicator => {
+        indicator.style.display = 'none';
+      });
+      
+      // 3. app.js の updateSyncButton 強制呼び出し
+      if (typeof window.updateSyncButton === 'function') {
+        window.updateSyncButton();
+      }
+      
+      AppUtils.log('強制同期状態更新完了', 'SYNC', 'DEBUG');
+      
+    } catch (error) {
+      AppUtils.log('強制同期状態更新エラー', 'SYNC', 'ERROR', { error: error.message });
     }
   }
 }
@@ -431,3 +494,4 @@ window.SyncManager = SyncManager;
 window.syncToMaster = () => SyncManager.syncToMaster();
 
 AppUtils.log('同期マネージャー読み込み完了', 'SYNC', 'INFO');
+// 同期完了 - サイレント処理（全ブラウザ統一）

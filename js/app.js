@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const tabsContainer = document.getElementById('tabs-container');
   const pageTitle = document.getElementById('page-title');
   
-  const DB_URL = './eparts.db';
+  const DB_URL = CONFIG.DATABASE.URL;
 
   AppUtils.log('アプリケーション初期化開始', 'APP', 'INFO');
 
