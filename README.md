@@ -113,35 +113,57 @@ npm run dev
   - GitHub Pagesでホスティング
   - 実際の在庫管理に使用
 
-### 🔄 初期セットアップ（ユーザー向け）
+### 🔄 初期セットアップ（個人利用向け）
 
-**このシステムを個人利用する場合の手順:**
+**このシステムを個人利用する場合の推奨手順:**
 
-1. **リポジトリをフォーク/クローン**
+#### 方式1: GitHub Actions使用（推奨）
 
+1. **リポジトリをフォーク**
+   - このリポジトリをGitHubでフォーク
+   - または新規リポジトリとしてクローン
+
+2. **GitHub Pagesの設定**
+   - フォークしたリポジトリの「Settings」→「Pages」
+   - **Source**: 「GitHub Actions」を選択
+
+3. **初回デプロイ**
+   ```bash
+   git clone <your-forked-repository-url>
+   cd ePartsDB
+   npm install
+   
+   # 任意でデータベースをカスタマイズ
+   # database/eparts.db を編集または差し替え
+   
+   git add .
+   git commit -m "個人用にカスタマイズ"
+   git push origin main  # 自動でビルド・デプロイ実行
+   ```
+
+#### 方式2: 手動デプロイ
+
+1. **リポジトリをクローン・gh-pagesブランチ作成**
    ```bash
    git clone <your-repository-url>
    cd ePartsDB
-   ```
-
-2. **gh-pagesブランチを作成・切り替え**
-
-   ```bash
+   npm install
+   
+   # gh-pagesブランチを作成
    git checkout -b gh-pages
    git push -u origin gh-pages
    ```
 
-3. **GitHub Pagesの設定**
+2. **GitHub Pagesの設定**
    - GitHubリポジトリの「Settings」→「Pages」
-   - Source: "Deploy from a branch"
-   - Branch: `gh-pages` / `/ (root)`
+   - **Source**: 「Deploy from a branch」
+   - **Branch**: `gh-pages` / **Folder**: `/ (root)`
 
-4. **初回ビルド・デプロイ**
-
+3. **初回ビルド・デプロイ**
    ```bash
-   npm install
    npm run build
-   git add dist/
+   cp -r dist/* .
+   git add -A
    git commit -m "初期デプロイ"
    git push origin gh-pages
    ```
@@ -150,86 +172,126 @@ npm run dev
 
 **日常的な在庫管理での手順:**
 
-1. ローカルで開発サーバー起動
+#### GitHub Actions使用時（推奨）
 
+1. **ローカルで在庫管理**
+   ```bash
+   git checkout main  # または個人用ブランチ
+   npm run dev        # ローカルサーバー起動
+   ```
+
+2. **ブラウザでデータ編集・在庫更新**
+
+3. **データベースファイルを更新・自動デプロイ**
+   ```bash
+   # ダウンロードしたファイルをdatabase/に配置
+   cp ~/Downloads/eparts.db database/eparts.db
+   
+   # 変更をコミット・プッシュ（自動デプロイ実行）
+   git add database/eparts.db
+   git commit -m "在庫データ更新: [変更内容]"
+   git push origin main
+   ```
+
+#### 手動デプロイ使用時
+
+1. **ローカルで在庫管理**
    ```bash
    git checkout gh-pages  # 個人運用ブランチに切り替え
    npm run dev
    ```
 
-2. ブラウザでデータ編集・在庫更新
+2. **ブラウザでデータ編集・在庫更新**
 
-3. 「同期（ダウンロード）」でデータベースファイルを取得
-
-4. データベースファイルを更新・デプロイ
-
+3. **データベースファイルを更新・手動デプロイ**
    ```bash
    # ダウンロードしたファイルをdatabase/に配置
    cp ~/Downloads/eparts.db database/eparts.db
    
-   # データベースファイルをコミット・プッシュ
+   # データベース更新のみの場合（ビルド不要）
    git add database/eparts.db
    git commit -m "在庫データ更新: [変更内容]"
    git push origin gh-pages
+   
+   # アプリケーションコード変更がある場合
+   npm run build
+   cp -r dist/* .
+   git add -A
+   git commit -m "アプリ＆データ更新: [変更内容]"
+   git push origin gh-pages
    ```
 
-**重要**: 個人の在庫データは`gh-pages`ブランチで管理し、`main`ブランチには反映させません。
+**💡 ヒント**: データベースのみの更新の場合、再ビルドは不要です。アプリケーションコード（React/TypeScript）を変更した場合のみビルドが必要になります。
 
 ### GitHub Pagesへのデプロイ
 
-#### 🔧 GitHub Pagesの設定
+#### 🔧 GitHub Pagesの設定と自動デプロイ
 
-1. **リポジトリの設定**
-   - GitHubリポジトリの「Settings」タブに移動
-   - 左サイドバーの「Pages」をクリック
+### 方式1: GitHub Actions（推奨）
 
-2. **ソースの設定（ブランチベース）**
+GitHub ActionsによるCI/CDパイプラインを使用した自動デプロイです。
+
+1. **GitHub Pagesの設定**
+   - GitHubリポジトリの「Settings」タブ → 「Pages」
+   - **Source**: 「GitHub Actions」を選択
+
+2. **自動デプロイ**
+   - `main` ブランチにプッシュすると自動でビルド・デプロイ実行
+   - `.github/workflows/deploy.yml` でワークフロー定義済み
+   - 手動実行も可能（「Actions」タブから「Run workflow」）
+
+### 方式2: 手動デプロイ（代替案）
+
+GitHub Actionsが使用できない場合の手動デプロイ方法です。
+
+1. **GitHub Pagesの設定**
+   - GitHubリポジトリの「Settings」タブ → 「Pages」
    - **Source**: 「Deploy from a branch」を選択
-   - **Branch**: `gh-pages` を選択
-   - **Folder**: `/ (root)` を選択
-   - 「Save」をクリック
+   - **Branch**: `gh-pages` を選択、**Folder**: `/ (root)` を選択
 
-3. **デプロイ方式**
-
-   現在の運用では、手動でのビルド・デプロイを行います：
+2. **手動デプロイ手順**
 
    ```bash
-   # ローカルでビルド
-   npm run build
-   
-   # 静的ファイルをコミット
-   git add dist/
-   git commit -m "サイト更新"
+   # 1. mainブランチで開発・変更
+   git checkout main
+   # ... コード変更 ...
+   git add .
+   git commit -m "機能追加"
+   git push origin main
+
+   # 2. gh-pagesブランチでデプロイ
+   git checkout gh-pages
+   git merge main          # mainの変更を取り込み
+   npm run build          # ビルド実行
+   cp -r dist/* .         # ビルド済みファイルをルートに配置
+   git add -A
+   git commit -m "デプロイ: [変更内容]"
    git push origin gh-pages
    ```
 
-   **注意**: GitHub Actionsによる自動デプロイは現在無効化されています。
+#### 📋 デプロイ確認
 
-4. **ビルドが必要な場合**
-
-   アプリケーションコード（JavaScript/TypeScript）を変更した場合のみ：
-
-   ```bash
-   npm run build
-   git add dist/
-   git commit -m "アプリケーション更新"
-   git push origin gh-pages
-   ```
-
-   **データベースファイルのみ更新の場合はビルド不要です。**
-
-#### 📋 デプロイ後の確認
-
-- GitHub Pagesの設定画面でデプロイ状況を確認
-- 「Actions」タブでビルド・デプロイの実行状況を確認
-- 公開URLでアプリケーションにアクセス
+- **GitHub Actions使用時**: 「Actions」タブでワークフロー実行状況を確認
+- **手動デプロイ時**: 「Settings」→「Pages」でデプロイ状況を確認
+- 公開URL（`https://[username].github.io/ePartsDB/`）でアプリケーション動作確認
 
 #### 🔄 データベース更新の反映
 
 1. ローカルモードでデータを編集
 2. 「同期（ダウンロード）」でeparts.dbをダウンロード
-3. ダウンロードしたファイルをリポジトリルートに配置
-4. Git commit & push
+3. ダウンロードしたファイルを`database/eparts.db`に配置
+4. 変更をコミット・プッシュ
+
+   ```bash
+   # データベースファイルを更新
+   cp ~/Downloads/eparts.db database/eparts.db
+   git add database/eparts.db
+   git commit -m "在庫データ更新: [変更内容]"
+   git push origin main  # GitHub Actions使用時
+   # または
+   git push origin gh-pages  # 手動デプロイ時
+   ```
+
 5. GitHub Actionsが自動実行され、更新されたデータがリモートモードに反映
 
 ## 🗄 データベース
@@ -377,7 +439,52 @@ npm run preview    # ビルド結果をプレビュー
 - `dist/` フォルダに静的ファイルが生成される
 - GitHub Pagesや任意の静的サーバーにデプロイ可能
 
-## 📄 ライセンス
+## � トラブルシューティング
+
+### よくある問題と解決方法
+
+#### 1. GitHub Pagesで「src/main.tsx 404エラー」が発生する
+
+**症状**: `GET https://[username].github.io/src/main.tsx net::ERR_ABORTED 404 (Not Found)`
+
+**原因**: ビルドされていない開発用ファイルが参照されている
+
+**解決方法**:
+
+1. **GitHub Actions使用時**:
+   - 「Settings」→「Pages」で「GitHub Actions」を選択
+   - `main`ブランチにプッシュして自動ビルド・デプロイを実行
+
+2. **手動デプロイ時**:
+   ```bash
+   git checkout gh-pages
+   npm run build
+   cp -r dist/* .
+   git add -A
+   git commit -m "ビルド済みファイルでデプロイ修正"
+   git push origin gh-pages
+   ```
+
+#### 2. データベースファイルが読み込めない
+
+**症状**: データベース初期化エラー、データが表示されない
+
+**原因**: データベースファイルのパスが間違っている、またはファイルが存在しない
+
+**解決方法**:
+- `database/eparts.db`ファイルが存在することを確認
+- ビルド時に`public/database/`にデータベースファイルが含まれることを確認
+
+#### 3. GitHub Actionsがデプロイに失敗する
+
+**症状**: Actions タブでワークフローが失敗している
+
+**解決方法**:
+1. エラーログを確認
+2. `npm install`や`npm run build`がローカルで成功することを確認
+3. リポジトリの「Settings」→「Pages」で「GitHub Actions」が選択されていることを確認
+
+## �📄 ライセンス
 
 このプロジェクトは MIT License の下でライセンスされています。
 
