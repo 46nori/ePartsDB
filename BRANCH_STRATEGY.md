@@ -47,8 +47,8 @@ git push origin gh-pages
 # 2. データベース更新（日常運用）
 git checkout gh-pages
 # ローカルでデータ編集後...
-cp ~/Downloads/eparts.db database/eparts.db
-git add database/eparts.db
+cp ~/Downloads/eparts.db public/database/eparts.db
+git add public/database/eparts.db
 git commit -m "在庫データ更新: [変更内容]"
 git push origin gh-pages
 # → 自動デプロイ実行
