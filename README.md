@@ -99,55 +99,50 @@ npm run dev
 
 ### ブランチ構成と運用方式
 
-このプロジェクトは以下のブランチ構成で運用されます：
+このプロジェクトは**デュアルブランチ運用**を採用しています：
 
 - **`main`ブランチ**:
-  - プログラムのソースコード
-  - サンプルデータベース（`database/eparts.db`）
-  - **リリース用・配布用**
-  - 開発者向けの基本セット
+  - 🧑‍💻 **開発・リリース管理用**
+  - アプリケーションのソースコード
+  - クリーンなサンプルデータベース
+  - ドキュメント・設定ファイル
+  - GitHub Actions: ビルドのみ（デプロイなし）
 
 - **`gh-pages`ブランチ**:
-  - **ユーザー個別の運用ブランチ**
-  - `main`からクローン後に作成
-  - 個人用データベース（`database/eparts.db`）を継続更新
-  - GitHub Pagesでホスティング
-  - 実際の在庫管理に使用
+  - 👤 **個人運用・実デプロイ用**
+  - `main`の最新コード + 個人データベース
+  - 実際の在庫管理データ
+  - GitHub Actions: ビルド + GitHub Pagesデプロイ
+  - 📱 実際にアクセスするURL: `https://[username].github.io/ePartsDB/`
 
 ### 🔄 初期セットアップ（個人利用向け）
 
-**このシステムを個人利用する場合の推奨手順:**
-
-#### 方式1: GitHub Actions使用（推奨）
+#### 推奨手順: GitHub Actions + デュアルブランチ運用
 
 1. **リポジトリをフォーク**
-   - このリポジトリをGitHubでフォーク
-   - または新規リポジトリとしてクローン
-
-2. **GitHub Pagesの設定**
-   - フォークしたリポジトリの「Settings」→「Pages」
-   - **Source**: 「GitHub Actions」を選択
-
-3. **初回デプロイ**
    ```bash
+   # GitHubでフォーク後
    git clone <your-forked-repository-url>
    cd ePartsDB
    npm install
-   
-   # 任意でデータベースをカスタマイズ
-   # database/eparts.db を編集または差し替え
-   
-   git add .
-   git commit -m "個人用にカスタマイズ"
-   git push origin main  # 自動でビルド・デプロイ実行
    ```
 
-#### 方式2: 手動デプロイ
-
-1. **リポジトリをクローン・gh-pagesブランチ作成**
+2. **個人運用ブランチを作成**
    ```bash
-   git clone <your-repository-url>
-   cd ePartsDB
+   # gh-pagesブランチを作成（個人運用用）
+   git checkout -b gh-pages
+   
+   # 任意: 個人のデータベースに差し替え
+   cp /path/to/your/eparts.db database/eparts.db
+   
+   git add .
+   git commit -m "個人運用環境の初期セットアップ"
+   git push -u origin gh-pages
+   ```
+
+3. **GitHub Pagesの設定**
+   - リポジトリの「Settings」→「Pages」
+   - **Source**: 「GitHub Actions」を選択
    npm install
    
    # gh-pagesブランチを作成
@@ -169,60 +164,58 @@ npm run dev
    git push origin gh-pages
    ```
 
-### 📊 継続運用（データベース更新）
+## 📊 継続運用の流れ
 
-**日常的な在庫管理での手順:**
+### 🧑‍💻 **開発者フロー（mainブランチ）**
 
-#### GitHub Actions使用時（推奨）
+新機能の開発・バグ修正：
 
-1. **ローカルで在庫管理**
-   ```bash
-   git checkout main  # または個人用ブランチ
-   npm run dev        # ローカルサーバー起動
-   ```
+```bash
+git checkout main
+git pull origin main
+# ... 開発作業 ...
+git add .
+git commit -m "機能追加: XXX"
+git push origin main  # ビルドのみ、デプロイなし
+```
 
-2. **ブラウザでデータ編集・在庫更新**
+### 👤 **個人利用者フロー（gh-pagesブランチ）**
 
-3. **データベースファイルを更新・自動デプロイ**
-   ```bash
-   # ダウンロードしたファイルをdatabase/に配置
-   cp ~/Downloads/eparts.db database/eparts.db
-   
-   # 変更をコミット・プッシュ（自動デプロイ実行）
-   git add database/eparts.db
-   git commit -m "在庫データ更新: [変更内容]"
-   git push origin main
-   ```
+#### パターン1: データベースのみ更新（日常運用）
 
-#### 手動デプロイ使用時
+```bash
+git checkout gh-pages
+npm run dev  # ローカルで在庫管理
 
-1. **ローカルで在庫管理**
-   ```bash
-   git checkout gh-pages  # 個人運用ブランチに切り替え
-   npm run dev
-   ```
+# データ編集後、ダウンロードしたDBファイルを配置
+cp ~/Downloads/eparts.db database/eparts.db
 
-2. **ブラウザでデータ編集・在庫更新**
+git add database/eparts.db
+git commit -m "在庫データ更新: [変更内容]"
+git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
+```
 
-3. **データベースファイルを更新・手動デプロイ**
-   ```bash
-   # ダウンロードしたファイルをdatabase/に配置
-   cp ~/Downloads/eparts.db database/eparts.db
-   
-   # データベース更新のみの場合（ビルド不要）
-   git add database/eparts.db
-   git commit -m "在庫データ更新: [変更内容]"
-   git push origin gh-pages
-   
-   # アプリケーションコード変更がある場合
-   npm run build
-   cp -r dist/* .
-   git add -A
-   git commit -m "アプリ＆データ更新: [変更内容]"
-   git push origin gh-pages
-   ```
+#### パターン2: 最新機能を取り込み + DB更新
 
-**💡 ヒント**: データベースのみの更新の場合、再ビルドは不要です。アプリケーションコード（React/TypeScript）を変更した場合のみビルドが必要になります。
+```bash
+git checkout gh-pages
+git merge main  # mainの最新機能を取り込み
+
+# 必要に応じてデータベース更新
+cp ~/Downloads/eparts.db database/eparts.db
+
+git add .
+git commit -m "機能更新 + 在庫データ更新"
+git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
+```
+
+### 🎯 **運用のメリット**
+
+- ✅ **分離された管理**: 開発と個人運用が独立
+- ✅ **柔軟な更新**: 機能・データを独立して更新可能
+- ✅ **自動デプロイ**: gh-pagesプッシュで自動反映
+- ✅ **データ保護**: 個人DBがmainブランチに混入しない
+- ✅ **履歴管理**: 個人DBの変更履歴もGitで管理
 
 ### GitHub Pagesへのデプロイ
 
