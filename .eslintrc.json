@@ -1,0 +1,16 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2020": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "ignorePatterns": ["dist"],
+  "rules": {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "prefer-const": "error",
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
+  }
+}
