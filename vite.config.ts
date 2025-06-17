@@ -9,7 +9,7 @@ export default defineConfig({
       jsxRuntime: 'automatic'
     })
   ],
-  base: './',
+  base: '/ePartsDB/',
   optimizeDeps: {
     exclude: ['sql.js']
   },
