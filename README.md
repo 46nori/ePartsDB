@@ -251,7 +251,7 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 
 1. ローカルモードでデータを編集
 2. 「同期（ダウンロード）」でeparts.dbをダウンロード
-3. ダウンロードしたファイルを`database/eparts.db`に配置
+3. ダウンロードしたファイルを`public/database/eparts.db`に配置
 4. 変更をコミット・プッシュ
 
    ```bash
