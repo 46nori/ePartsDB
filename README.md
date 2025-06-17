@@ -133,7 +133,7 @@ npm run dev
    git checkout -b gh-pages
    
    # 任意: 個人のデータベースに差し替え
-   cp /path/to/your/eparts.db database/eparts.db
+   cp /path/to/your/eparts.db public/database/eparts.db
    
    git add .
    git commit -m "個人運用環境の初期セットアップ"
@@ -168,9 +168,9 @@ git checkout gh-pages
 npm run dev  # ローカルで在庫管理
 
 # データ編集後、ダウンロードしたDBファイルを配置
-cp ~/Downloads/eparts.db database/eparts.db
+cp ~/Downloads/eparts.db public/database/eparts.db
 
-git add database/eparts.db
+git add public/database/eparts.db
 git commit -m "在庫データ更新: [変更内容]"
 git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
 ```
@@ -182,7 +182,7 @@ git checkout gh-pages
 git merge main  # mainの最新機能を取り込み
 
 # 必要に応じてデータベース更新
-cp ~/Downloads/eparts.db database/eparts.db
+cp ~/Downloads/eparts.db public/database/eparts.db
 
 git add .
 git commit -m "機能更新 + 在庫データ更新"
@@ -256,8 +256,8 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 
    ```bash
    # データベースファイルを更新
-   cp ~/Downloads/eparts.db database/eparts.db
-   git add database/eparts.db
+   cp ~/Downloads/eparts.db public/database/eparts.db
+   git add public/database/eparts.db
    git commit -m "在庫データ更新: [変更内容]"
    git push origin gh-pages  # GitHub Actions使用時
    ```
@@ -266,7 +266,7 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 
 ## 🗄 データベース
 
-データベースは`database/eparts.db`に配置されています。
+データベースは`public/database/eparts.db`に配置されています。
 
 ### スキーマ
 
@@ -275,6 +275,15 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 - `inventory`: 在庫情報
 
 詳細なスキーマ定義は `URS/schema.sql` を参照してください。
+
+### 📁 データベースファイル管理
+
+**重要**: データベースファイルは`public/database/eparts.db`の**1箇所のみ**で管理されます。
+
+- ✅ **本番・開発共通**: `public/database/eparts.db`
+- ✅ **Vite自動処理**: ビルド時に`dist/database/eparts.db`に自動コピー
+
+データベース更新時は`public/database/eparts.db`のみ更新すればOKです。
 
 ## 📱 使用方法
 
@@ -313,12 +322,12 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 1. ローカルモードでデータを編集（在庫数・パーツ情報など）
 2. 「同期（ダウンロード）」ボタンをクリック
 3. ファイル保存ダイアログで保存場所を選択（デフォルト：ダウンロードフォルダ）
-4. ダウンロードした`eparts.db`ファイルを`database/`フォルダに移動
+4. ダウンロードした`eparts.db`ファイルを`public/database/`フォルダに移動
 5. **`gh-pages`ブランチにコミット・プッシュ**
 
    ```bash
    git checkout gh-pages
-   git add database/eparts.db
+   git add public/database/eparts.db
    git commit -m "在庫データ更新: [変更内容の説明]"
    git push origin gh-pages
    ```
@@ -442,14 +451,16 @@ npm run preview    # ビルド結果をプレビュー
 **原因**: データベースファイルのパスが間違っている、またはファイルが存在しない
 
 **解決方法**:
-- `database/eparts.db`ファイルが存在することを確認
-- ビルド時に`public/database/`にデータベースファイルが含まれることを確認
+
+- `public/database/eparts.db`ファイルが存在することを確認
+- ビルド時に`dist/database/`にデータベースファイルが含まれることを確認
 
 #### 3. GitHub Actionsがデプロイに失敗する
 
 **症状**: Actions タブでワークフローが失敗している
 
 **解決方法**:
+
 1. エラーログを確認
 2. `npm install`や`npm run build`がローカルで成功することを確認
 3. リポジトリの「Settings」→「Pages」で「GitHub Actions」が選択されていることを確認
