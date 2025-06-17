@@ -7,11 +7,18 @@ const devLog = (message: string, ...args: any[]) => {
   }
 };
 
+// サンプルデータの型定義
+interface SampleData {
+  categories: Category[];
+  parts: PartWithInventory[];
+}
+
 // sql.jsをrequire形式で読み込む簡易版
 export class DatabaseManager {
   private hasChanges = false;
-  private sampleData: any = null;
+  private sampleData: SampleData | null = null;
   private useSampleData = true;
+  private db?: any; // sql.js Database instance
 
   /**
    * データベースを初期化する
@@ -76,7 +83,7 @@ export class DatabaseManager {
       
       // データベースの内容を確認
       this.verifyDatabase(db);
-      (this as any).db = db;
+      this.db = db;
       
     } catch (error) {
       console.error('データベース読み込みエラー:', error);
@@ -105,7 +112,7 @@ export class DatabaseManager {
       return this.sampleData.categories.sort((a: Category, b: Category) => a.display_order - b.display_order);
     }
     
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       console.warn('データベースが初期化されていません');
       return [];
@@ -159,7 +166,7 @@ export class DatabaseManager {
       return filteredParts;
     }
 
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       console.warn('データベースが初期化されていません');
       return [];
@@ -306,7 +313,7 @@ export class DatabaseManager {
       return;
     }
 
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       console.warn('データベースが初期化されていません');
       return;
@@ -358,7 +365,7 @@ export class DatabaseManager {
       return false;
     }
 
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       console.warn('データベースが初期化されていません');
       return false;
@@ -417,7 +424,7 @@ export class DatabaseManager {
       return true;
     }
 
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       devLog('データベースが初期化されていません');
       return false;
@@ -656,7 +663,7 @@ export class DatabaseManager {
       return false;
     }
 
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       console.warn('データベースが初期化されていません');
       return false;
@@ -764,7 +771,7 @@ export class DatabaseManager {
       return null;
     }
 
-    const db = (this as any).db;
+    const db = this.db;
     if (!db) {
       console.warn('データベースが初期化されていません');
       return null;
