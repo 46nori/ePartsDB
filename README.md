@@ -91,7 +91,7 @@ npm run dev
 **データ更新フロー:**
 1. ローカルモードでデータを編集
 2. 「同期（ダウンロード）」ボタンで更新されたeparts.dbをダウンロード
-3. ダウンロードしたeparts.dbをリポジトリのルート配下の`database/`に配置
+3. ダウンロードしたeparts.dbを`public/database/eparts.db`に配置
 4. Gitでコミット・プッシュ
 5. 次回のGitHub Pagesデプロイ時にリモートモードへ反映
 
@@ -338,8 +338,8 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 
 **保存場所のヒント:**
 
-- Chrome/Edge: ファイル保存ダイアログでプロジェクトフォルダの`database/`に直接保存可能
-- Safari/Firefox: ダウンロードフォルダに保存後、手動でプロジェクトの`database/`フォルダに移動
+- Chrome/Edge: ファイル保存ダイアログでプロジェクトフォルダの`public/database/`に直接保存可能
+- Safari/Firefox: ダウンロードフォルダに保存後、手動でプロジェクトの`public/database/`フォルダに移動
 
 ## 🚧 開発状況
 
