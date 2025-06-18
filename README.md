@@ -448,41 +448,16 @@ npm run preview    # ビルド結果をプレビュー
 
 ### よくある問題と解決方法
 
-#### 1. GitHub Pagesで「src/main.tsx 404エラー」が発生する
-
-**症状**: `GET https://[username].github.io/src/main.tsx net::ERR_ABORTED 404 (Not Found)`
-
-**原因**: ビルドされていない開発用ファイルが参照されている
-
-**解決方法**:
-
-1. **GitHub Actions使用時**:
-   - 「Settings」→「Pages」で「GitHub Actions」を選択
-   - `main`ブランチにプッシュして自動ビルド・デプロイを実行
-
-2. **手動デプロイ時**:
-
-   ```bash
-   git checkout gh-pages
-   npm run build
-   cp -r dist/* .
-   git add -A
-   git commit -m "ビルド済みファイルでデプロイ修正"
-   git push origin gh-pages
-   ```
-
-#### 2. データベースファイルが読み込めない
+#### データベースファイルが読み込めない
 
 **症状**: データベース初期化エラー、データが表示されない
-
-**原因**: データベースファイルのパスが間違っている、またはファイルが存在しない
 
 **解決方法**:
 
 - `public/database/eparts.db`ファイルが存在することを確認
-- ビルド時に`dist/database/`にデータベースファイルが含まれることを確認
+- ブラウザのコンソールでエラーメッセージを確認
 
-#### 3. GitHub Actionsがデプロイに失敗する
+#### GitHub Actionsがデプロイに失敗する
 
 **症状**: Actions タブでワークフローが失敗している
 
