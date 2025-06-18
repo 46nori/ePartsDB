@@ -81,7 +81,8 @@ npm run dev
 ```
 
 **アクセス:**
-- ブラウザで `http://localhost:5173` を開く
+
+- ブラウザで [http://localhost:5173](http://localhost:5173) を開く
 
 **特徴:**
 - 編集・追加・削除が可能
