@@ -177,9 +177,11 @@ git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
 
 #### パターン2: 最新機能を取り込み + DB更新
 
+**✅ 安全なマージ**: `.gitattributes`により、`public/database/eparts.db`は自動的にマージから除外され、個人のデータベースが保護されます。
+
 ```bash
 git checkout gh-pages
-git merge main  # mainの最新機能を取り込み
+git merge main  # mainの最新機能を取り込み（DBは自動的に保護される）
 
 # 必要に応じてデータベース更新
 cp ~/Downloads/eparts.db public/database/eparts.db
@@ -195,7 +197,30 @@ git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
 - ✅ **柔軟な更新**: 機能・データを独立して更新可能
 - ✅ **自動デプロイ**: gh-pagesプッシュで自動反映
 - ✅ **データ保護**: 個人DBがmainブランチに混入しない
-- ✅ **履歴管理**: 個人DBの変更履歴もGitで管理
+- ✅ **履歴管理**: 個人DBの変更履歴もGitで管理され、バックアップとして機能
+- ✅ **安全なマージ**: `.gitattributes`により、mainからのマージ時にDBが自動保護される
+
+### 🛡️ **データベース保護メカニズム**
+
+このプロジェクトでは、`.gitattributes`を使用して個人のデータベースを自動的に保護しています：
+
+```gitattributes
+# .gitattributes
+public/database/eparts.db merge=ours
+```
+
+**この設定の効果:**
+
+- **mainからのマージ時**: `public/database/eparts.db`は自動的に現在のブランチ（gh-pages）の内容が優先される
+- **個人データ保護**: 誤ってmainのテンプレートDBで上書きされることがない
+- **シンプルな運用**: バックアップ・復元の手動操作が不要
+- **開発継続性**: mainブランチでのDB変更（テスト用等）も安全に行える
+
+**適用範囲:**
+
+- mainからgh-pagesへのマージ
+- フォーク・クローン時の初期状態維持
+- テスト用データベース（sample-eparts.db等）の一時的利用時の保護
 
 ## � GitHub Pagesへのデプロイ
 
@@ -223,6 +248,8 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 
 2. **手動デプロイ手順**
 
+   **✅ 安全なマージ**: `.gitattributes`により、`public/database/eparts.db`は自動的にマージから除外され、個人のデータベースが保護されます。
+
    ```bash
    # 1. mainブランチで開発・変更
    git checkout main
@@ -233,7 +260,7 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 
    # 2. gh-pagesブランチでデプロイ
    git checkout gh-pages
-   git merge main          # mainの変更を取り込み
+   git merge main          # mainの変更を取り込み（DBは自動保護）
    npm run build          # ビルド実行
    cp -r dist/* .         # ビルド済みファイルをルートに配置
    git add -A
@@ -298,7 +325,6 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 #### 在庫編集
 
 1. 在庫数の数値を直接編集
-2. 「同期（ダウンロード）」ボタンでデータベースファイルをダウンロード
 
 #### パーツ編集
 
@@ -435,6 +461,7 @@ npm run preview    # ビルド結果をプレビュー
    - `main`ブランチにプッシュして自動ビルド・デプロイを実行
 
 2. **手動デプロイ時**:
+
    ```bash
    git checkout gh-pages
    npm run build

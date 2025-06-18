@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Database merge strategy: keep current branch's database when merging from main
+# This protects personal database from being overwritten by main's template database
+public/database/eparts.db merge=ours
