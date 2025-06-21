@@ -889,15 +889,39 @@ export class DatabaseManager {
   }
 
   /**
-   * カテゴリ情報を更新する
+   * カテゴリ情報を更新する（新規追加と削除も含む）
    */
-  updateCategories(updatedCategories: Category[]): boolean {
+  updateCategories(updatedCategories: Category[], deletedCategoryIds: number[] = []): boolean {
     if (this.useSampleData) {
       // サンプルデータモードでもカテゴリ更新をサポート
       if (this.sampleData) {
-        this.sampleData.categories = updatedCategories.map(category => ({ ...category }));
+        // 削除対象カテゴリに関連するパーツとインベントリを削除
+        for (const deletedId of deletedCategoryIds) {
+          // 関連するパーツを削除
+          this.sampleData.parts = this.sampleData.parts.filter(part => part.category_id !== deletedId);
+        }
+
+        // 削除対象カテゴリを現在のカテゴリリストから除外
+        const remainingCategories = this.sampleData.categories.filter(
+          category => !deletedCategoryIds.includes(category.id)
+        );
+
+        // 新規カテゴリ（負のID）に正のIDを割り当て
+        let maxId = Math.max(...remainingCategories.map(c => c.id), 0);
+        const processedCategories = updatedCategories.map(category => {
+          if (category.id < 0) {
+            // 新規カテゴリの場合、正のIDを割り当て
+            return { ...category, id: ++maxId };
+          }
+          return { ...category };
+        });
+        
+        this.sampleData.categories = processedCategories;
         this.hasChanges = true;
-        devLog('サンプルデータのカテゴリを更新');
+        devLog('サンプルデータのカテゴリを更新（新規追加・削除含む）', {
+          updated: processedCategories.length,
+          deleted: deletedCategoryIds.length
+        });
         return true;
       }
       return false;
@@ -913,30 +937,78 @@ export class DatabaseManager {
       // トランザクション開始
       db.exec('BEGIN TRANSACTION');
 
-      // 各カテゴリを更新
-      for (const category of updatedCategories) {
-        const updateStmt = db.prepare(`
-          UPDATE categories SET
-            name = ?,
-            display_order = ?
-          WHERE id = ?
+      // 削除対象カテゴリの関連データを削除
+      for (const deletedId of deletedCategoryIds) {
+        // 関連するインベントリを削除（parts経由）
+        const deleteInventoryStmt = db.prepare(`
+          DELETE FROM inventory 
+          WHERE part_id IN (
+            SELECT id FROM parts WHERE category_id = ?
+          )
         `);
-        
-        updateStmt.bind([
-          category.name,
-          category.display_order,
-          category.id
-        ]);
-        
-        updateStmt.step();
-        updateStmt.free();
+        deleteInventoryStmt.bind([deletedId]);
+        deleteInventoryStmt.step();
+        deleteInventoryStmt.free();
+
+        // 関連するパーツを削除
+        const deletePartsStmt = db.prepare(`
+          DELETE FROM parts WHERE category_id = ?
+        `);
+        deletePartsStmt.bind([deletedId]);
+        deletePartsStmt.step();
+        deletePartsStmt.free();
+
+        // カテゴリを削除
+        const deleteCategoryStmt = db.prepare(`
+          DELETE FROM categories WHERE id = ?
+        `);
+        deleteCategoryStmt.bind([deletedId]);
+        deleteCategoryStmt.step();
+        deleteCategoryStmt.free();
+      }
+
+      // 各カテゴリを処理
+      for (const category of updatedCategories) {
+        if (category.id < 0) {
+          // 新規カテゴリの場合はINSERT
+          const insertStmt = db.prepare(`
+            INSERT INTO categories (name, parent_id, display_order)
+            VALUES (?, ?, ?)
+          `);
+          
+          insertStmt.bind([
+            category.name,
+            category.parent_id || null,
+            category.display_order
+          ]);
+          
+          insertStmt.step();
+          insertStmt.free();
+        } else {
+          // 既存カテゴリの場合はUPDATE
+          const updateStmt = db.prepare(`
+            UPDATE categories SET
+              name = ?,
+              display_order = ?
+            WHERE id = ?
+          `);
+          
+          updateStmt.bind([
+            category.name,
+            category.display_order,
+            category.id
+          ]);
+          
+          updateStmt.step();
+          updateStmt.free();
+        }
       }
 
       // トランザクション完了
       db.exec('COMMIT');
 
       this.hasChanges = true;
-      devLog('データベースのカテゴリを更新');
+      devLog('データベースのカテゴリを更新（新規追加・削除含む）');
       return true;
     } catch (error) {
       // エラー時はロールバック

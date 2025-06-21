@@ -181,9 +181,9 @@ function App() {
     setIsCategoryEditModalOpen(true);
   };
 
-  const handleCategorySave = (updatedCategories: Category[]) => {
+  const handleCategorySave = (updatedCategories: Category[], deletedCategoryIds: number[]) => {
     if (environment === 'local') {
-      const success = dbManager.updateCategories(updatedCategories);
+      const success = dbManager.updateCategories(updatedCategories, deletedCategoryIds);
       if (success) {
         setCategories(dbManager.getCategories());
         refreshSearchResults();

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Category } from '../types';
-import { X, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
 
 interface CategoryEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (categories: Category[]) => void;
+  onSave: (categories: Category[], deletedCategoryIds: number[]) => void;
   categories: Category[];
 }
 
@@ -16,12 +16,19 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
   categories
 }) => {
   const [editedCategories, setEditedCategories] = useState<Category[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [nextTempId, setNextTempId] = useState<number>(-1); // 一時的なIDは負の値を使用
+  const [deletedCategoryIds, setDeletedCategoryIds] = useState<number[]>([]); // 削除対象の既存カテゴリID
 
   useEffect(() => {
     if (isOpen) {
       // カテゴリをdisplay_orderで昇順ソート
       const sortedCategories = [...categories].sort((a, b) => a.display_order - b.display_order);
       setEditedCategories(sortedCategories);
+      setNewCategoryName('');
+      setDeletedCategoryIds([]); // 削除対象IDをリセット
+      // 一時的なIDの初期値を設定（既存のIDと重複しないように負の値から開始）
+      setNextTempId(-1);
     }
   }, [isOpen, categories]);
 
@@ -49,6 +56,38 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
     setEditedCategories(newCategories);
   };
 
+  const addNewCategory = () => {
+    if (!newCategoryName.trim()) {
+      return; // 空欄の場合は何もしない
+    }
+
+    const newCategory: Category = {
+      id: nextTempId, // 一時的なID（負の値）
+      name: newCategoryName.trim(),
+      parent_id: undefined,
+      display_order: 1 // 先頭に表示されるように小さい値
+    };
+
+    // カテゴリ一覧の先頭に追加
+    setEditedCategories([newCategory, ...editedCategories]);
+    setNewCategoryName(''); // 入力欄をクリア
+    setNextTempId(nextTempId - 1); // 次の一時的IDを準備
+  };
+
+  const deleteCategory = (index: number) => {
+    const categoryToDelete = editedCategories[index];
+    
+    if (categoryToDelete.id >= 0) {
+      // 既存カテゴリの場合は削除対象IDに追加
+      setDeletedCategoryIds([...deletedCategoryIds, categoryToDelete.id]);
+    }
+    // 新規追加カテゴリ（負のID）の場合は単に一覧から削除
+
+    // 表示一覧から削除
+    const newCategories = editedCategories.filter((_, i) => i !== index);
+    setEditedCategories(newCategories);
+  };
+
   const handleSave = () => {
     // 空欄チェック
     const hasEmptyName = editedCategories.some(category => !category.name.trim());
@@ -63,7 +102,14 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
       display_order: (index + 1) * 100 // 100, 200, 300... のように設定
     }));
 
-    onSave(updatedCategories);
+    // デバッグログ
+    console.log('CategoryEditModal - handleSave:', {
+      updatedCategories: updatedCategories.length,
+      deletedCategoryIds,
+      categories: updatedCategories.map(c => ({ id: c.id, name: c.name }))
+    });
+
+    onSave(updatedCategories, deletedCategoryIds);
     onClose();
   };
 
@@ -88,9 +134,45 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
             </p>
           </div>
           
+          {/* 新しいカテゴリ追加フォーム */}
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="新しいカテゴリ名を入力"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={addNewCategory}
+                disabled={!newCategoryName.trim()}
+                className={`px-3 py-2 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                  newCategoryName.trim()
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                title="カテゴリを追加"
+              >
+                <Plus className="w-4 h-4" />
+                追加
+              </button>
+            </div>
+          </div>
+          
           <div className="space-y-1">
             {editedCategories.map((category, index) => (
-              <div key={category.id} className="flex items-center gap-2 py-1 px-2 border border-gray-200 rounded">
+              <div 
+                key={category.id} 
+                className={`flex items-center gap-2 py-1 px-2 border rounded ${
+                  category.id < 0 
+                    ? 'border-green-200 bg-green-50' // 新規追加カテゴリ
+                    : 'border-gray-200'               // 既存カテゴリ
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => moveUp(index)}
@@ -130,9 +212,22 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
                   />
                 </div>
                 
-                <div className="text-xs text-gray-400 w-12 text-right">
-                  {category.id}
+                <div className={`text-xs w-12 text-right ${
+                  category.id < 0 
+                    ? 'text-green-600 font-medium' // 新規追加カテゴリ
+                    : 'text-gray-400'              // 既存カテゴリ
+                }`}>
+                  {category.id < 0 ? 'NEW' : category.id}
                 </div>
+                
+                <button
+                  type="button"
+                  onClick={() => deleteCategory(index)}
+                  className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                  title="カテゴリを削除"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
