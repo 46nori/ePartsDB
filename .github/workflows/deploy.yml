@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main, gh-pages ]  # 両ブランチで実行
+    branches: [ main, develop, gh-pages ]  # 全ブランチで実行
   workflow_dispatch:
 
 permissions:

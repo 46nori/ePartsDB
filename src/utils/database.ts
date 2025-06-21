@@ -285,7 +285,12 @@ export class DatabaseManager {
           power_rating: row[12],
           tolerance: row[13],
           logic_family: row[14],
-          datasheet_url: row[15]
+          datasheet_url: row[15],
+          purchase_date: row[16],
+          shop: row[17],
+          price_per_unit: row[18],
+          currency: row[19],
+          memo: row[20]
         });
       }
 
@@ -552,7 +557,12 @@ export class DatabaseManager {
           location: '引き出し A-1',
           voltage_rating: '250V',
           power_rating: '0.25W',
-          tolerance: '±5%'
+          tolerance: '±5%',
+          purchase_date: '2025-01-15',
+          shop: '秋月電子通商',
+          price_per_unit: 10,
+          currency: 'JPY',
+          memo: '基板用抵抗として購入'
         },
         {
           id: 2,
@@ -566,7 +576,12 @@ export class DatabaseManager {
           quantity: 25,
           location: '引き出し B-2',
           voltage_rating: '16V',
-          tolerance: '±10%'
+          tolerance: '±10%',
+          purchase_date: '2025-01-20',
+          shop: 'Digi-Key',
+          price_per_unit: 25,
+          currency: 'JPY',
+          memo: 'SMD実装用'
         },
         {
           id: 3,
@@ -580,7 +595,12 @@ export class DatabaseManager {
           quantity: 100,
           location: '引き出し C-3',
           voltage_rating: '100V',
-          current_rating: '200mA'
+          current_rating: '200mA',
+          purchase_date: '2025-01-10',
+          shop: '千石電商',
+          price_per_unit: 15,
+          currency: 'JPY',
+          memo: 'スイッチング回路用'
         },
         {
           id: 4,
@@ -594,7 +614,12 @@ export class DatabaseManager {
           quantity: 75,
           location: '引き出し D-1',
           voltage_rating: '40V',
-          current_rating: '200mA'
+          current_rating: '200mA',
+          purchase_date: '2025-01-25',
+          shop: 'RSコンポーネンツ',
+          price_per_unit: 30,
+          currency: 'JPY',
+          memo: 'アンプ回路用トランジスタ'
         },
         {
           id: 5,
@@ -609,7 +634,12 @@ export class DatabaseManager {
           location: '引き出し E-2',
           voltage_rating: '32V',
           power_rating: '500mW',
-          logic_family: 'Analog'
+          logic_family: 'Analog',
+          purchase_date: '2025-02-01',
+          shop: 'マルツエレック',
+          price_per_unit: 80,
+          currency: 'JPY',
+          memo: 'アナログ回路用IC'
         },
         {
           id: 6,
@@ -623,7 +653,12 @@ export class DatabaseManager {
           quantity: 20,
           location: '引き出し E-3',
           voltage_rating: '5V',
-          logic_family: 'HC'
+          logic_family: 'HC',
+          purchase_date: '2025-02-05',
+          shop: 'エレショップ',
+          price_per_unit: 120,
+          currency: 'JPY',
+          memo: 'デジタル回路用ロジックIC'
         }
       ]
     };
@@ -850,6 +885,140 @@ export class DatabaseManager {
       }
       console.error('パーツ追加エラー:', error);
       return null;
+    }
+  }
+
+  /**
+   * カテゴリ情報を更新する（新規追加と削除も含む）
+   */
+  updateCategories(updatedCategories: Category[], deletedCategoryIds: number[] = []): boolean {
+    if (this.useSampleData) {
+      // サンプルデータモードでもカテゴリ更新をサポート
+      if (this.sampleData) {
+        // 削除対象カテゴリに関連するパーツとインベントリを削除
+        for (const deletedId of deletedCategoryIds) {
+          // 関連するパーツを削除
+          this.sampleData.parts = this.sampleData.parts.filter(part => part.category_id !== deletedId);
+        }
+
+        // 削除対象カテゴリを現在のカテゴリリストから除外
+        const remainingCategories = this.sampleData.categories.filter(
+          category => !deletedCategoryIds.includes(category.id)
+        );
+
+        // 新規カテゴリ（負のID）に正のIDを割り当て
+        let maxId = Math.max(...remainingCategories.map(c => c.id), 0);
+        const processedCategories = updatedCategories.map(category => {
+          if (category.id < 0) {
+            // 新規カテゴリの場合、正のIDを割り当て
+            return { ...category, id: ++maxId };
+          }
+          return { ...category };
+        });
+        
+        this.sampleData.categories = processedCategories;
+        this.hasChanges = true;
+        devLog('サンプルデータのカテゴリを更新（新規追加・削除含む）', {
+          updated: processedCategories.length,
+          deleted: deletedCategoryIds.length
+        });
+        return true;
+      }
+      return false;
+    }
+
+    const db = this.db;
+    if (!db) {
+      console.warn('データベースが初期化されていません');
+      return false;
+    }
+
+    try {
+      // トランザクション開始
+      db.exec('BEGIN TRANSACTION');
+
+      // 削除対象カテゴリの関連データを削除
+      for (const deletedId of deletedCategoryIds) {
+        // 関連するインベントリを削除（parts経由）
+        const deleteInventoryStmt = db.prepare(`
+          DELETE FROM inventory 
+          WHERE part_id IN (
+            SELECT id FROM parts WHERE category_id = ?
+          )
+        `);
+        deleteInventoryStmt.bind([deletedId]);
+        deleteInventoryStmt.step();
+        deleteInventoryStmt.free();
+
+        // 関連するパーツを削除
+        const deletePartsStmt = db.prepare(`
+          DELETE FROM parts WHERE category_id = ?
+        `);
+        deletePartsStmt.bind([deletedId]);
+        deletePartsStmt.step();
+        deletePartsStmt.free();
+
+        // カテゴリを削除
+        const deleteCategoryStmt = db.prepare(`
+          DELETE FROM categories WHERE id = ?
+        `);
+        deleteCategoryStmt.bind([deletedId]);
+        deleteCategoryStmt.step();
+        deleteCategoryStmt.free();
+      }
+
+      // 各カテゴリを処理
+      for (const category of updatedCategories) {
+        if (category.id < 0) {
+          // 新規カテゴリの場合はINSERT
+          const insertStmt = db.prepare(`
+            INSERT INTO categories (name, parent_id, display_order)
+            VALUES (?, ?, ?)
+          `);
+          
+          insertStmt.bind([
+            category.name,
+            category.parent_id || null,
+            category.display_order
+          ]);
+          
+          insertStmt.step();
+          insertStmt.free();
+        } else {
+          // 既存カテゴリの場合はUPDATE
+          const updateStmt = db.prepare(`
+            UPDATE categories SET
+              name = ?,
+              display_order = ?
+            WHERE id = ?
+          `);
+          
+          updateStmt.bind([
+            category.name,
+            category.display_order,
+            category.id
+          ]);
+          
+          updateStmt.step();
+          updateStmt.free();
+        }
+      }
+
+      // トランザクション完了
+      db.exec('COMMIT');
+
+      this.hasChanges = true;
+      devLog('データベースのカテゴリを更新（新規追加・削除含む）');
+      return true;
+    } catch (error) {
+      // エラー時はロールバック
+      try {
+        db.exec('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('ロールバックエラー:', rollbackError);
+      }
+      console.error('カテゴリ更新エラー:', error);
+      return false;
     }
   }
 

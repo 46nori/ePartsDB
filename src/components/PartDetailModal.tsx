@@ -28,10 +28,10 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
     ? `${part.category_id} (${getCategoryName(part.category_id)})`
     : 'Not specified';
 
-  const fields = [
+  const basicFields = [
     { label: 'ID', value: part.id },
-    { label: 'パーツ名', value: part.name },
     { label: 'カテゴリ', value: categoryDisplay },
+    { label: 'パーツ名', value: part.name },
     { label: 'メーカー', value: part.manufacturer },
     { label: '型番', value: part.part_number },
     { label: 'パッケージ', value: part.package },
@@ -40,11 +40,18 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
     { label: '電力定格', value: part.power_rating },
     { label: '許容誤差', value: part.tolerance },
     { label: 'タイプ', value: part.logic_family },
-    { label: '説明', value: part.description },
+    { label: '説明', value: part.description, isLongText: true },
     { label: 'データシートURL', value: part.datasheet_url, isUrl: true },
     { label: '在庫数', value: part.quantity },
     { label: '保管場所', value: part.location },
     { label: '作成日時', value: part.created_at }
+  ];
+
+  const purchaseFields = [
+    { label: '購入先', value: part.shop },
+    { label: '単価', value: part.price_per_unit ? `${part.price_per_unit} ${part.currency || 'JPY'}` : null },
+    { label: '購入日', value: part.purchase_date },
+    { label: '購入メモ', value: part.memo, isLongText: true }
   ];
 
   return (
@@ -61,27 +68,52 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
         </div>
         
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {fields.map((field) => (
-              <div key={field.label} className="border-b border-gray-200 pb-2">
-                <dt className="text-sm font-medium text-gray-500">{field.label}</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {field.isUrl && field.value ? (
-                    <a
-                      href={field.value as string}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                    >
-                      {field.value}
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    field.value || '-'
-                  )}
-                </dd>
-              </div>
-            ))}
+          {/* 基本情報セクション */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">基本情報</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {basicFields.map((field) => (
+                <div key={field.label} className={`border-b border-gray-200 pb-2 ${field.isUrl || field.isLongText ? 'md:col-span-2' : ''}`}>
+                  <dt className="text-sm font-medium text-gray-500">{field.label}</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {field.isUrl && field.value ? (
+                      <a
+                        href={field.value as string}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 flex items-start gap-1 break-all"
+                      >
+                        <span className="break-all">{field.value}</span>
+                        <ExternalLink className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      </a>
+                    ) : field.isLongText && field.value ? (
+                      <div className="break-words whitespace-pre-wrap">{field.value}</div>
+                    ) : (
+                      field.value || '-'
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 購入情報セクション */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">購入情報</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {purchaseFields.map((field) => (
+                <div key={field.label} className={`border-b border-gray-200 pb-2 ${field.isLongText ? 'md:col-span-2' : ''}`}>
+                  <dt className="text-sm font-medium text-gray-500">{field.label}</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {field.isLongText && field.value ? (
+                      <div className="break-words whitespace-pre-wrap">{field.value}</div>
+                    ) : (
+                      field.value || '-'
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         
