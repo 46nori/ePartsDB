@@ -4,6 +4,7 @@ import { PartsTable } from './components/PartsTable';
 import { PartDetailModal } from './components/PartDetailModal';
 import { PartEditModal } from './components/PartEditModal';
 import { PartAddModal } from './components/PartAddModal';
+import { CategoryEditModal } from './components/CategoryEditModal';
 import { ActionButtons } from './components/ActionButtons';
 import { DatabaseManager } from './utils/database';
 import { detectEnvironment } from './utils/environment';
@@ -24,6 +25,7 @@ function App() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCategoryEditModalOpen, setIsCategoryEditModalOpen] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -175,6 +177,24 @@ function App() {
     setSelectedCategoryId(null);
   };
 
+  const handleCategoryEdit = () => {
+    setIsCategoryEditModalOpen(true);
+  };
+
+  const handleCategorySave = (updatedCategories: Category[]) => {
+    if (environment === 'local') {
+      const success = dbManager.updateCategories(updatedCategories);
+      if (success) {
+        setCategories(dbManager.getCategories());
+        refreshSearchResults();
+        setHasChanges(dbManager.getHasChanges());
+        setIsCategoryEditModalOpen(false);
+      } else {
+        alert('カテゴリの更新に失敗しました。');
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -224,6 +244,7 @@ function App() {
           onUndo={handleUndo}
           onSync={handleSync}
           onAddPart={handleAddPart}
+          onCategoryEdit={handleCategoryEdit}
         />
 
         {/* Search Section */}
@@ -299,6 +320,14 @@ function App() {
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onAdd={handlePartAdd}
+          categories={categories}
+        />
+
+        {/* Category Edit Modal */}
+        <CategoryEditModal
+          isOpen={isCategoryEditModalOpen}
+          onClose={() => setIsCategoryEditModalOpen(false)}
+          onSave={handleCategorySave}
           categories={categories}
         />
       </div>

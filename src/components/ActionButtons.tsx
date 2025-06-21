@@ -1,6 +1,6 @@
 import React from 'react';
 import { Environment } from '../types';
-import { Undo, Download, Plus } from 'lucide-react';
+import { Undo, Download, Plus, Edit3 } from 'lucide-react';
 
 interface ActionButtonsProps {
   environment: Environment;
@@ -8,6 +8,7 @@ interface ActionButtonsProps {
   onUndo: () => void;
   onSync: () => void;
   onAddPart: () => void;
+  onCategoryEdit: () => void;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -15,7 +16,8 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   hasChanges,
   onUndo,
   onSync,
-  onAddPart
+  onAddPart,
+  onCategoryEdit
 }) => {
   if (environment === 'remote') {
     return null;
@@ -30,6 +32,14 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         >
           <Plus className="w-4 h-4" />
           パーツの追加
+        </button>
+        
+        <button
+          onClick={onCategoryEdit}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-colors"
+        >
+          <Edit3 className="w-4 h-4" />
+          カテゴリ編集
         </button>
         
         {hasChanges && (

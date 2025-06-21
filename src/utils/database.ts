@@ -889,6 +889,68 @@ export class DatabaseManager {
   }
 
   /**
+   * カテゴリ情報を更新する
+   */
+  updateCategories(updatedCategories: Category[]): boolean {
+    if (this.useSampleData) {
+      // サンプルデータモードでもカテゴリ更新をサポート
+      if (this.sampleData) {
+        this.sampleData.categories = updatedCategories.map(category => ({ ...category }));
+        this.hasChanges = true;
+        devLog('サンプルデータのカテゴリを更新');
+        return true;
+      }
+      return false;
+    }
+
+    const db = this.db;
+    if (!db) {
+      console.warn('データベースが初期化されていません');
+      return false;
+    }
+
+    try {
+      // トランザクション開始
+      db.exec('BEGIN TRANSACTION');
+
+      // 各カテゴリを更新
+      for (const category of updatedCategories) {
+        const updateStmt = db.prepare(`
+          UPDATE categories SET
+            name = ?,
+            display_order = ?
+          WHERE id = ?
+        `);
+        
+        updateStmt.bind([
+          category.name,
+          category.display_order,
+          category.id
+        ]);
+        
+        updateStmt.step();
+        updateStmt.free();
+      }
+
+      // トランザクション完了
+      db.exec('COMMIT');
+
+      this.hasChanges = true;
+      devLog('データベースのカテゴリを更新');
+      return true;
+    } catch (error) {
+      // エラー時はロールバック
+      try {
+        db.exec('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('ロールバックエラー:', rollbackError);
+      }
+      console.error('カテゴリ更新エラー:', error);
+      return false;
+    }
+  }
+
+  /**
    * サンプルデータモードかどうかを取得
    */
   getUseSampleData(): boolean {
