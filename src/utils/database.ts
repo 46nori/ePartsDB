@@ -285,7 +285,12 @@ export class DatabaseManager {
           power_rating: row[12],
           tolerance: row[13],
           logic_family: row[14],
-          datasheet_url: row[15]
+          datasheet_url: row[15],
+          purchase_date: row[16],
+          shop: row[17],
+          price_per_unit: row[18],
+          currency: row[19],
+          memo: row[20]
         });
       }
 
@@ -552,7 +557,12 @@ export class DatabaseManager {
           location: '引き出し A-1',
           voltage_rating: '250V',
           power_rating: '0.25W',
-          tolerance: '±5%'
+          tolerance: '±5%',
+          purchase_date: '2025-01-15',
+          shop: '秋月電子通商',
+          price_per_unit: 10,
+          currency: 'JPY',
+          memo: '基板用抵抗として購入'
         },
         {
           id: 2,
@@ -566,7 +576,12 @@ export class DatabaseManager {
           quantity: 25,
           location: '引き出し B-2',
           voltage_rating: '16V',
-          tolerance: '±10%'
+          tolerance: '±10%',
+          purchase_date: '2025-01-20',
+          shop: 'Digi-Key',
+          price_per_unit: 25,
+          currency: 'JPY',
+          memo: 'SMD実装用'
         },
         {
           id: 3,
@@ -580,7 +595,12 @@ export class DatabaseManager {
           quantity: 100,
           location: '引き出し C-3',
           voltage_rating: '100V',
-          current_rating: '200mA'
+          current_rating: '200mA',
+          purchase_date: '2025-01-10',
+          shop: '千石電商',
+          price_per_unit: 15,
+          currency: 'JPY',
+          memo: 'スイッチング回路用'
         },
         {
           id: 4,
@@ -594,7 +614,12 @@ export class DatabaseManager {
           quantity: 75,
           location: '引き出し D-1',
           voltage_rating: '40V',
-          current_rating: '200mA'
+          current_rating: '200mA',
+          purchase_date: '2025-01-25',
+          shop: 'RSコンポーネンツ',
+          price_per_unit: 30,
+          currency: 'JPY',
+          memo: 'アンプ回路用トランジスタ'
         },
         {
           id: 5,
@@ -609,7 +634,12 @@ export class DatabaseManager {
           location: '引き出し E-2',
           voltage_rating: '32V',
           power_rating: '500mW',
-          logic_family: 'Analog'
+          logic_family: 'Analog',
+          purchase_date: '2025-02-01',
+          shop: 'マルツエレック',
+          price_per_unit: 80,
+          currency: 'JPY',
+          memo: 'アナログ回路用IC'
         },
         {
           id: 6,
@@ -623,7 +653,12 @@ export class DatabaseManager {
           quantity: 20,
           location: '引き出し E-3',
           voltage_rating: '5V',
-          logic_family: 'HC'
+          logic_family: 'HC',
+          purchase_date: '2025-02-05',
+          shop: 'エレショップ',
+          price_per_unit: 120,
+          currency: 'JPY',
+          memo: 'デジタル回路用ロジックIC'
         }
       ]
     };

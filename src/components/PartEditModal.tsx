@@ -77,7 +77,7 @@ export const PartEditModal: React.FC<PartEditModalProps> = ({
     { key: 'shop', label: '購入先', type: 'text' },
     { key: 'price_per_unit', label: '単価', type: 'number' },
     { key: 'currency', label: '通貨', type: 'select' },
-    { key: 'memo', label: 'メモ', type: 'textarea' }
+    { key: 'memo', label: '購入メモ', type: 'textarea' }
   ];
 
   return (
