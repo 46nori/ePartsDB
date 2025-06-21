@@ -4,69 +4,50 @@
 
 このプログラムおよびドキュメントは、GitHub CopilotのAgentモードで生成されました。使用したモデルはClaude Sonnet 4 (Preview)です。コード生成に使用した要求仕様は[こちら](URS/Requirement.md)。
 
-## 🚀 機能
+## � システム概要
 
-### ✅ 基本機能
-- **パーツ検索**: カテゴリ別検索とキーワード検索
-- **在庫管理**: パーツの在庫数表示・編集
-- **詳細情報**: パーツの詳細情報表示
-- **パーツ編集**: パーツ情報の編集
-- **パーツ追加**: 新規パーツの追加
-- **パーツ削除**: 不要なパーツの削除
-- **データ同期**: データベースファイルのダウンロード
-- **レスポンシブUI**: スマートフォン・タブレット対応
+### ✨ 主な特徴
 
-### 🔧 運用モード
-
-このシステムには2つの運用モードがあります：
-
-- **リモートモード** (GitHub Pages等): 読み取り専用、データ閲覧用
-- **ローカルモード**: 編集・追加・削除が可能、データ管理用
-
-ローカルモードはデータベースの編集・管理を行うための本格的な運用モードです。
-
-### 🌟 高度な機能
+- **2つの運用モード**: リモート閲覧用とローカル編集用
 - **ブラウザ内SQLite**: sql.jsによるクライアントサイドデータベース
-- **環境自動判別**: デプロイ環境を自動判別してUI切り替え
-- **ブラウザ別ダウンロード対応**: Chrome/Safari/Firefox対応
-- **ダウンロード場所ガイド**: ブラウザ・OS別の保存場所案内
+- **レスポンシブUI**: PC・タブレット・スマートフォン対応
+- **静的ホスティング**: GitHub Pages等での簡単デプロイ
 
-## 🛠 技術スタック
+### 🚀 基本機能
+
+- **パーツ検索**: カテゴリ別検索・キーワード検索
+- **在庫管理**: 在庫数の表示・編集（ローカルモード）
+- **パーツ管理**: 詳細表示・編集・追加・削除
+- **カテゴリ編集**: カテゴリ名編集・表示順序変更
+- **データ同期**: 編集内容のダウンロード・バックアップ
+
+### 🛠 技術スタック
 
 - **フロントエンド**: React 18 + TypeScript + Vite
 - **データベース**: SQLite + sql.js (ブラウザ内実行)
 - **スタイリング**: Tailwind CSS
 - **アイコン**: Lucide React
 - **ホスティング**: GitHub Pages (静的)
-- **ビルドツール**: Vite
-- **型チェック**: TypeScript
 
-## 📊 プロジェクト統計
+### 📊 プロジェクト統計
 
-- **総コード行数**: 2,277行（TypeScript/React）
-- **プロジェクト全体**: 7,271行（設定・ドキュメント含む）
-- **コンポーネント数**: 6個（React TSX）
-- **主要機能**: 検索・編集・追加・削除・同期
+- **総コード行数**: 2,738行（TypeScript/React）
+- **プロジェクト全体**: 11,680行（設定・ドキュメント含む）
+- **コンポーネント数**: 9個（React TSX）
 - **対応ブラウザ**: Chrome, Safari, Firefox, Edge
 
-## 📦 セットアップ
-
-### 依存関係のインストール
-
-```bash
-npm install
-```
-
-## 🚀 運用方法
+## � 使い方
 
 ### 🌐 リモートモード（データ閲覧用）
 
 GitHub Pagesで公開されているアプリで、データの閲覧のみ可能です。
 
 **アクセス方法:**
+
 - GitHub Pagesのデプロイ済みURLにアクセス
 
 **特徴:**
+
 - 読み取り専用
 - パーツ検索・詳細表示のみ
 - 最新のデータベース内容を反映
@@ -75,7 +56,10 @@ GitHub Pagesで公開されているアプリで、データの閲覧のみ可�
 
 ローカルサーバーで動作するモードで、データベースの編集・管理が可能です。
 
+> **前提条件**: 「👤 個人運用」セクションの初期セットアップが完了していること
+
 **起動方法:**
+
 ```bash
 npm run dev
 ```
@@ -85,42 +69,37 @@ npm run dev
 - ブラウザで [http://localhost:5173](http://localhost:5173) を開く
 
 **特徴:**
+
 - 編集・追加・削除が可能
 - リアルタイムでデータ変更
 - データベースファイルのダウンロード機能
 
-**データ更新フロー:**
-1. ローカルモードでデータを編集
-2. 「同期（ダウンロード）」ボタンで更新されたeparts.dbをダウンロード
-3. ダウンロードしたeparts.dbを`public/database/eparts.db`に配置
-4. Gitでコミット・プッシュ
-5. 次回のGitHub Pagesデプロイ時にリモートモードへ反映
+> 💡 **初回利用の方**: まず「👤 個人運用」の初期セットアップを実行してください。
 
-## 🚢 デプロイ
+### 📱 基本操作
 
-### ブランチ構成と運用方式
+#### パーツ検索（全モード共通）
 
-このプロジェクトは**デュアルブランチ運用**を採用しています：
+1. **カテゴリ検索**: カテゴリボタンをクリック
+2. **キーワード検索**: 検索ボックスにキーワードを入力
+3. **詳細表示**: パーツ行の情報アイコンをクリック
 
-- **`main`ブランチ**:
-  - 🧑‍💻 **開発・リリース管理用**
-  - アプリケーションのソースコード
-  - クリーンなサンプルデータベース
-  - ドキュメント・設定ファイル
-  - GitHub Actions: ビルドのみ（デプロイなし）
+#### データ管理（ローカルモードのみ）
 
-- **`gh-pages`ブランチ**:
-  - 👤 **個人運用・実デプロイ用**
-  - `main`の最新コード + 個人データベース
-  - 実際の在庫管理データ
-  - GitHub Actions: ビルド + GitHub Pagesデプロイ
-  - 📱 実際にアクセスするURL: `https://[username].github.io/ePartsDB/`
+- **在庫編集**: 在庫数の数値を直接編集
+- **パーツ編集**: パーツ行の編集ボタンをクリック→情報を編集→保存
+- **パーツ追加**: 「パーツの追加」ボタン→必要な情報を入力→保存
+- **パーツ削除**: パーツ行の削除ボタン→確認ダイアログで実行
+- **カテゴリ編集**: 「カテゴリ編集」ボタン→名前編集・順序変更→保存
 
-### 🔄 初期セットアップ（個人利用向け）
+## 👤 個人運用
 
-#### 推奨手順: GitHub Actions + デュアルブランチ運用
+> **重要**: ローカルモード（データ管理）を使用するには、まずこちらの初期セットアップが必要です。
+
+### 🔄 初期セットアップ
 
 1. **リポジトリをフォーク**
+
    ```bash
    # GitHubでフォーク後
    git clone <your-forked-repository-url>
@@ -129,6 +108,7 @@ npm run dev
    ```
 
 2. **個人運用ブランチを作成**
+
    ```bash
    # gh-pagesブランチを作成（個人運用用）
    git checkout -b gh-pages
@@ -145,228 +125,133 @@ npm run dev
    - リポジトリの「Settings」→「Pages」
    - **Source**: 「GitHub Actions」を選択
 
-## 📊 継続運用の流れ
+> ✅ **セットアップ完了後**: 上記の「💻 ローカルモード」でデータ管理が可能になります。
 
-### 🧑‍💻 **開発者フロー（mainブランチ）**
-
-新機能の開発・バグ修正：
+### 📊 日常的なデータ更新
 
 ```bash
-git checkout main
-git pull origin main
+git checkout gh-pages
+# ローカルでデータを編集し、DBをダウンロード
+cp ~/Downloads/eparts.db public/database/eparts.db
+git add public/database/eparts.db
+git commit -m "在庫データ更新"
+git push origin gh-pages  # 自動デプロイ
+```
+
+### 🔄 最新機能の取り込み
+
+```bash
+git checkout gh-pages
+git merge main  # 最新機能を取り込み（DBは自動保護）
+git push origin gh-pages  # 自動デプロイ
+```
+
+### 📁 データ更新フロー
+
+1. ローカルモードでデータを編集
+2. 「同期（ダウンロード）」ボタンで更新されたeparts.dbをダウンロード
+3. ダウンロードしたeparts.dbを`public/database/eparts.db`に配置
+4. Gitでコミット・プッシュ
+5. 次回のGitHub Pagesデプロイ時にリモートモードへ反映
+
+## � 開発・リリース方法
+
+### 🏗 ブランチ構成（トリプルブランチ運用）
+
+- **`develop`ブランチ**: 機能開発・バグ修正用
+- **`main`ブランチ**: リリース版・安定版管理
+- **`gh-pages`ブランチ**: 個人運用・実デプロイ用
+
+### �‍💻 開発環境セットアップ
+
+```bash
+# リポジトリのクローン
+git clone <repository-url>
+cd ePartsDB
+npm install
+
+# developブランチに切り替えて開発開始
+git checkout develop
+git pull origin develop
+npm run dev  # 開発サーバー起動
+```
+
+### 🔄 開発フロー
+
+```bash
+# 1. 機能開発
+git checkout develop
+git pull origin develop
 # ... 開発作業 ...
 git add .
 git commit -m "機能追加: XXX"
-git push origin main  # ビルドのみ、デプロイなし
+git push origin develop
+
+# 2. リリース（メンテナー向け）
+git checkout main
+git pull origin main
+git merge develop
+git push origin main
 ```
 
-### 👤 **個人利用者フロー（gh-pagesブランチ）**
+### 🚀 mainブランチでのリリース手順
 
-#### パターン1: データベースのみ更新（日常運用）
-
-```bash
-git checkout gh-pages
-npm run dev  # ローカルで在庫管理
-
-# データ編集後、ダウンロードしたDBファイルを配置
-cp ~/Downloads/eparts.db public/database/eparts.db
-
-git add public/database/eparts.db
-git commit -m "在庫データ更新: [変更内容]"
-git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
-```
-
-#### パターン2: 最新機能を取り込み + DB更新
-
-**✅ 安全なマージ**: `.gitattributes`により、`public/database/eparts.db`は自動的にマージから除外され、個人のデータベースが保護されます。
+メンテナー向けの詳細なリリース手順：
 
 ```bash
-git checkout gh-pages
-git merge main  # mainの最新機能を取り込み（DBは自動的に保護される）
+# 1. developブランチの準備確認
+git checkout develop
+git pull origin develop
+npm run build  # ビルドエラーがないか確認
+npm run preview  # 動作確認
 
-# 必要に応じてデータベース更新
-cp ~/Downloads/eparts.db public/database/eparts.db
+# 2. mainブランチへマージ
+git checkout main
+git pull origin main
+git merge develop
 
+# 3. バージョン更新
+npm version patch  # パッチ版上げ（バグ修正）
+# または
+npm version minor  # マイナー版上げ（新機能）
+# または
+npm version major  # メジャー版上げ（破壊的変更）
+
+# 4. CHANGELOG.mdの更新
+# 新しいバージョンの変更内容を記録
+
+# 5. リリースコミット・タグ作成・プッシュ
 git add .
-git commit -m "機能更新 + 在庫データ更新"
-git push origin gh-pages  # 🚀 自動ビルド・デプロイ実行
+git commit -m "リリース準備: v$(node -p "require('./package.json').version")"
+git push origin main
+git push --tags  # タグもプッシュ
+
+# 6. GitHubでリリース作成
+# GitHub上でReleases → "Create a new release"
+# - タグ: 最新のvタグを選択
+# - リリースタイトル: "v1.3.0"
+# - 説明: CHANGELOG.mdの該当バージョンの内容をコピー
 ```
 
-### 🎯 **運用のメリット**
+### ✅ リリース後の確認事項
 
-- ✅ **分離された管理**: 開発と個人運用が独立
-- ✅ **柔軟な更新**: 機能・データを独立して更新可能
-- ✅ **自動デプロイ**: gh-pagesプッシュで自動反映
-- ✅ **データ保護**: 個人DBがmainブランチに混入しない
-- ✅ **履歴管理**: 個人DBの変更履歴もGitで管理され、バックアップとして機能
-- ✅ **安全なマージ**: `.gitattributes`により、mainからのマージ時にDBが自動保護される
+- [ ] GitHub Actionsが正常に完了している
+- [ ] リリースページが正しく作成されている  
+- [ ] タグが正しく作成されている
+- [ ] CHANGELOGが最新版を反映している
 
-### 🛡️ **データベース保護メカニズム**
+### 🔨 ビルドコマンド
 
-このプロジェクトでは、`.gitattributes`を使用して個人のデータベースを自動的に保護しています：
-
-```gitattributes
-# .gitattributes
-public/database/eparts.db merge=ours
+```bash
+npm run build    # 本番ビルド
+npm run preview  # ビルド結果をプレビュー
 ```
-
-**この設定の効果:**
-
-- **mainからのマージ時**: `public/database/eparts.db`は自動的に現在のブランチ（gh-pages）の内容が優先される
-- **個人データ保護**: 誤ってmainのテンプレートDBで上書きされることがない
-- **シンプルな運用**: バックアップ・復元の手動操作が不要
-- **開発継続性**: mainブランチでのDB変更（テスト用等）も安全に行える
-
-**適用範囲:**
-
-- mainからgh-pagesへのマージ
-- フォーク・クローン時の初期状態維持
-- テスト用データベース（sample-eparts.db等）の一時的利用時の保護
-
-## � GitHub Pagesへのデプロイ
-
-### 方式1: GitHub Actions（推奨）
-
-GitHub ActionsによるCI/CDパイプラインを使用した自動デプロイです。
-
-1. **GitHub Pagesの設定**
-   - GitHubリポジトリの「Settings」タブ → 「Pages」
-   - **Source**: 「GitHub Actions」を選択
-
-2. **自動デプロイ**
-   - `gh-pages` ブランチにプッシュすると自動でビルド・デプロイ実行
-   - `.github/workflows/deploy.yml` でワークフロー定義済み
-   - 手動実行も可能（「Actions」タブから「Run workflow」）
-
-### 方式2: 手動デプロイ（代替案）
-
-GitHub Actionsが使用できない場合の手動デプロイ方法です。
-
-1. **GitHub Pagesの設定**
-   - GitHubリポジトリの「Settings」タブ → 「Pages」
-   - **Source**: 「Deploy from a branch」を選択
-   - **Branch**: `gh-pages` を選択、**Folder**: `/ (root)` を選択
-
-2. **手動デプロイ手順**
-
-   **✅ 安全なマージ**: `.gitattributes`により、`public/database/eparts.db`は自動的にマージから除外され、個人のデータベースが保護されます。
-
-   ```bash
-   # 1. mainブランチで開発・変更
-   git checkout main
-   # ... コード変更 ...
-   git add .
-   git commit -m "機能追加"
-   git push origin main
-
-   # 2. gh-pagesブランチでデプロイ
-   git checkout gh-pages
-   git merge main          # mainの変更を取り込み（DBは自動保護）
-   npm run build          # ビルド実行
-   cp -r dist/* .         # ビルド済みファイルをルートに配置
-   git add -A
-   git commit -m "デプロイ: [変更内容]"
-   git push origin gh-pages
-   ```
-
-### 📋 デプロイ確認
-
-- **GitHub Actions使用時**: 「Actions」タブでワークフロー実行状況を確認
-- **手動デプロイ時**: 「Settings」→「Pages」でデプロイ状況を確認
-- 公開URL（`https://[username].github.io/ePartsDB/`）でアプリケーション動作確認
-
-### 🔄 データベース更新の反映
-
-1. ローカルモードでデータを編集
-2. 「同期（ダウンロード）」でeparts.dbをダウンロード
-3. ダウンロードしたファイルを`public/database/eparts.db`に配置
-4. 変更をコミット・プッシュ
-
-   ```bash
-   # データベースファイルを更新
-   cp ~/Downloads/eparts.db public/database/eparts.db
-   git add public/database/eparts.db
-   git commit -m "在庫データ更新: [変更内容]"
-   git push origin gh-pages  # GitHub Actions使用時
-   ```
-
-5. GitHub Actionsが自動実行され、更新されたデータがリモートモードに反映
 
 ## 🗄 データベース
 
-データベースは`public/database/eparts.db`に配置されています。
-
-### スキーマ
-
-- `categories`: パーツカテゴリ
-- `parts`: 電子パーツ基本情報  
-- `inventory`: 在庫情報
-
-詳細なスキーマ定義は `URS/schema.sql` を参照してください。
-
-### 📁 データベースファイル管理
-
-**重要**: データベースファイルは`public/database/eparts.db`の**1箇所のみ**で管理されます。
-
-- ✅ **本番・開発共通**: `public/database/eparts.db`
-- ✅ **Vite自動処理**: ビルド時に`dist/database/eparts.db`に自動コピー
-
-データベース更新時は`public/database/eparts.db`のみ更新すればOKです。
-
-## 📱 使用方法
-
-### パーツ検索（全モード共通）
-
-1. **カテゴリ検索**: カテゴリボタンをクリック
-2. **キーワード検索**: 検索ボックスにキーワードを入力
-3. **詳細表示**: パーツ行の情報アイコンをクリック
-
-### データ管理（ローカルモードのみ）
-
-#### 在庫編集
-
-1. 在庫数の数値を直接編集
-
-#### パーツ編集
-
-1. パーツ行の編集ボタンをクリック
-2. 情報を編集して保存
-
-#### パーツ追加
-
-1. 「パーツの追加」ボタンをクリック
-2. 必要な情報を入力して保存
-
-#### パーツ削除
-
-1. パーツ行の削除ボタンをクリック
-2. 確認ダイアログで削除を実行
-
-### データベース更新フロー（個人運用）
-
-**個人の`gh-pages`ブランチでの在庫管理:**
-
-1. ローカルモードでデータを編集（在庫数・パーツ情報など）
-2. 「同期（ダウンロード）」ボタンをクリック
-3. ファイル保存ダイアログで保存場所を選択（デフォルト：ダウンロードフォルダ）
-4. ダウンロードした`eparts.db`ファイルを`public/database/`フォルダに移動
-5. **`gh-pages`ブランチにコミット・プッシュ**
-
-   ```bash
-   git checkout gh-pages
-   git add public/database/eparts.db
-   git commit -m "在庫データ更新: [変更内容の説明]"
-   git push origin gh-pages
-   ```
-
-   **注意**: データベースファイルの更新のみの場合、`npm run build`は不要です。
-
-6. GitHub Pagesで個人サイトに自動反映
-
-**保存場所のヒント:**
-
-- Chrome/Edge: ファイル保存ダイアログでプロジェクトフォルダの`public/database/`に直接保存可能
-- Safari/Firefox: ダウンロードフォルダに保存後、手動でプロジェクトの`public/database/`フォルダに移動
+- **ファイル**: `public/database/eparts.db`（1箇所で管理）
+- **スキーマ**: categories, parts, inventory
+- **詳細**: `URS/schema.sql` を参照
 
 ## 🚧 開発状況
 
@@ -378,10 +263,16 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 - ✅ パーツ情報編集
 - ✅ パーツ新規追加
 - ✅ パーツ削除
+- ✅ カテゴリ編集（名前・表示順序変更）
 - ✅ データベース同期（ダウンロード）
 - ✅ 環境自動判別
 - ✅ レスポンシブUI
 - ✅ ブラウザ別ダウンロード対応
+
+### 🚧 未実装機能
+
+- ⏳ **カテゴリ追加**: eparts.dbを直接編集すれば可能
+- ⏳ **カテゴリ削除**: 関連のあるパーツを削除する実装が必要
 
 ### 🎯 品質指標
 
@@ -391,84 +282,12 @@ GitHub Actionsが使用できない場合の手動デプロイ方法です。
 - ✅ パフォーマンス最適化
 - ✅ セキュリティ対策
 
-## 🔧 開発者・管理者向け情報
+## 🚨 トラブルシューティング
 
-### ブランチの役割分担
+- **データベース読み込めない**: `public/database/eparts.db`の存在確認、ブラウザコンソールでエラーチェック
+- **GitHub Actionsデプロイ失敗**: Actions タブでエラーログ確認、ローカルビルド成功確認
 
-**開発者・管理者の場合:**
-
-- `main`ブランチで機能開発・バグ修正
-- サンプルデータベースの更新・メンテナンス
-- リリース版の配布・管理
-
-**エンドユーザーの場合:**
-
-- `main`からフォーク・クローン
-- `gh-pages`ブランチで個人の在庫管理
-- 個人データは`main`に反映させない
-
-## 🔧 アプリケーション開発
-
-このセクションはアプリケーション自体の開発に関する情報です。
-
-### 開発要件
-
-- Node.js 18+
-- npm または yarn
-
-### 開発環境セットアップ
-
-```bash
-git clone <repository-url>
-cd ePartsDB
-npm install
-npm run dev
-```
-
-### ビルド構成
-
-**開発用ビルド:**
-
-```bash
-npm run dev  # 開発サーバー起動（ローカルモード）
-```
-
-**本番用ビルド:**
-
-```bash
-npm run build      # 本番ビルド
-npm run preview    # ビルド結果をプレビュー
-```
-
-**出力:**
-
-- `dist/` フォルダに静的ファイルが生成される
-- GitHub Pagesや任意の静的サーバーにデプロイ可能
-
-## � トラブルシューティング
-
-### よくある問題と解決方法
-
-#### データベースファイルが読み込めない
-
-**症状**: データベース初期化エラー、データが表示されない
-
-**解決方法**:
-
-- `public/database/eparts.db`ファイルが存在することを確認
-- ブラウザのコンソールでエラーメッセージを確認
-
-#### GitHub Actionsがデプロイに失敗する
-
-**症状**: Actions タブでワークフローが失敗している
-
-**解決方法**:
-
-1. エラーログを確認
-2. `npm install`や`npm run build`がローカルで成功することを確認
-3. リポジトリの「Settings」→「Pages」で「GitHub Actions」が選択されていることを確認
-
-## �📄 ライセンス
+## 📄 ライセンス
 
 このプロジェクトは MIT License の下でライセンスされています。
 
