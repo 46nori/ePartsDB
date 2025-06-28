@@ -25,12 +25,12 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   };
 
   const categoryDisplay = part.category_id 
-    ? `${part.category_id} (${getCategoryName(part.category_id)})`
+    ? `${getCategoryName(part.category_id)}(${part.category_id})`
     : 'Not specified';
 
   const basicFields = [
     { label: 'ID', value: part.id },
-    { label: 'カテゴリ', value: categoryDisplay },
+    { label: 'カテゴリ(ID)', value: categoryDisplay },
     { label: 'パーツ名', value: part.name },
     { label: 'メーカー', value: part.manufacturer },
     { label: '型番', value: part.part_number },

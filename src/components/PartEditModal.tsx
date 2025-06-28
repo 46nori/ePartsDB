@@ -71,12 +71,12 @@ export const PartEditModal: React.FC<PartEditModalProps> = ({
     { key: 'tolerance', label: '許容誤差', type: 'text' },
     { key: 'logic_family', label: 'タイプ', type: 'text' },
     { key: 'description', label: '説明', type: 'textarea' },
-    { key: 'datasheet_url', label: 'データシートURL', type: 'url' },
-    { key: 'location', label: '保管場所', type: 'text' },
-    { key: 'purchase_date', label: '購入日', type: 'date' },
-    { key: 'shop', label: '購入先', type: 'text' },
+    { key: 'datasheet_url', label: 'データシートURL', type: 'url', fullWidth: true },
     { key: 'price_per_unit', label: '単価', type: 'number' },
     { key: 'currency', label: '通貨', type: 'select' },
+    { key: 'shop', label: '購入先', type: 'text' },
+    { key: 'purchase_date', label: '購入日', type: 'date' },
+    { key: 'location', label: '保管場所', type: 'text' },
     { key: 'memo', label: '購入メモ', type: 'textarea' }
   ];
 
@@ -98,7 +98,10 @@ export const PartEditModal: React.FC<PartEditModalProps> = ({
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {formFields.map((field) => (
-                <div key={field.key} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
+                <div key={field.key} className={
+                  field.type === 'textarea' ? 'md:col-span-2' : 
+                  field.fullWidth ? 'md:col-span-2' : ''
+                }>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {field.label}
                     {field.required && <span className="text-red-500">*</span>}
