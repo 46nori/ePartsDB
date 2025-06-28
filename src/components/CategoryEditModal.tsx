@@ -212,14 +212,6 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
                   />
                 </div>
                 
-                <div className={`text-xs w-12 text-right ${
-                  category.id < 0 
-                    ? 'text-green-600 font-medium' // 新規追加カテゴリ
-                    : 'text-gray-400'              // 既存カテゴリ
-                }`}>
-                  {category.id < 0 ? 'NEW' : category.id}
-                </div>
-                
                 <button
                   type="button"
                   onClick={() => deleteCategory(index)}
