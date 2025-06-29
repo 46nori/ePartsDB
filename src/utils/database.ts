@@ -120,7 +120,7 @@ export class DatabaseManager {
     }
 
     try {
-      const result = db.exec('SELECT * FROM categories ORDER BY display_order');
+      const result = db.exec('SELECT id, name, parent_id, display_order FROM categories ORDER BY display_order');
       if (result.length === 0) return [];
 
       const categories: Category[] = [];
@@ -131,7 +131,8 @@ export class DatabaseManager {
         categories.push({
           id: row[0],
           name: row[1],
-          display_order: row[2]
+          parent_id: row[2],
+          display_order: row[3]
         });
       }
 

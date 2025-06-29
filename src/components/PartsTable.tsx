@@ -1,22 +1,27 @@
-import React, { useState } from 'react';
-import { PartWithInventory, Environment } from '../types';
+import React, { useState, useMemo } from 'react';
+import { PartWithInventory, Environment, Category } from '../types';
 import { ExternalLink, Info, Edit, Trash2, ArrowUpDown } from 'lucide-react';
+import { createCategoryMap, getCategoryNameFromMap, getCategoryDisplayOrderFromMap } from '../utils/categoryUtils';
 
 interface PartsTableProps {
   parts: PartWithInventory[];
   environment: Environment;
+  categories: Category[];
+  showCategoryColumn?: boolean; // キーワード検索時にカテゴリ列を表示するかどうか
   onQuantityChange: (partId: number, quantity: number) => void;
   onPartDetail: (part: PartWithInventory) => void;
   onPartEdit: (part: PartWithInventory) => void;
   onPartDelete: (partId: number) => void;
 }
 
-type SortField = 'quantity' | 'name' | 'part_number' | 'package' | 'logic_family' | 'description';
+type SortField = 'quantity' | 'name' | 'part_number' | 'package' | 'logic_family' | 'description' | 'category';
 type SortDirection = 'asc' | 'desc';
 
 export const PartsTable: React.FC<PartsTableProps> = ({
   parts,
   environment,
+  categories,
+  showCategoryColumn = false,
   onQuantityChange,
   onPartDetail,
   onPartEdit,
@@ -24,6 +29,23 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 }) => {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // パフォーマンス最適化: カテゴリをMapに変換
+  const categoryMap = useMemo(() => createCategoryMap(categories), [categories]);
+
+  const getCategoryName = (categoryId?: number): string => {
+    return getCategoryNameFromMap(categoryMap, categoryId);
+  };
+
+  const getCategoryDisplayOrder = (categoryId?: number): number => {
+    const order = getCategoryDisplayOrderFromMap(categoryMap, categoryId);
+    // デバッグ用（開発環境でのみ）
+    if (import.meta.env.DEV) {
+      const category = categoryMap.get(categoryId || 0);
+      console.log(`Category ID: ${categoryId}, Display Order: ${order}, Category Name: ${category?.name || 'Not found'}, Category Object:`, category);
+    }
+    return order;
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -35,22 +57,35 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   };
 
   const sortedParts = [...parts].sort((a, b) => {
-    let aValue = a[sortField] || '';
-    let bValue = b[sortField] || '';
-    
     if (sortField === 'quantity') {
-      aValue = a.quantity;
-      bValue = b.quantity;
+      const aValue = a.quantity;
+      const bValue = b.quantity;
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    } else if (sortField === 'category') {
+      const aValue = getCategoryDisplayOrder(a.category_id);
+      const bValue = getCategoryDisplayOrder(b.category_id);
+      // デバッグ用（開発環境でのみ）
+      if (import.meta.env.DEV) {
+        console.log(`Sorting categories: Part A (${a.name}) order: ${aValue}, Part B (${b.name}) order: ${bValue}, Direction: ${sortDirection}`);
+      }
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    } else {
+      let aValue = a[sortField as keyof PartWithInventory] || '';
+      let bValue = b[sortField as keyof PartWithInventory] || '';
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     }
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      aValue = aValue.toLowerCase();
-      bValue = bValue.toLowerCase();
-    }
-    
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
   });
 
   const SortHeader: React.FC<{ field: SortField; children: React.ReactNode }> = ({ field, children }) => (
@@ -77,6 +112,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               <SortHeader field="package">外形</SortHeader>
               <SortHeader field="logic_family">タイプ</SortHeader>
               <SortHeader field="description">詳細</SortHeader>
+              {showCategoryColumn && (
+                <SortHeader field="category">カテゴリ</SortHeader>
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 操作
               </th>
@@ -125,6 +163,11 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                 <td className="px-4 py-4 text-sm text-gray-500 max-w-xs truncate">
                   {part.description || '-'}
                 </td>
+                {showCategoryColumn && (
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {getCategoryName(part.category_id)}
+                  </td>
+                )}
                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center gap-2">
                     <button

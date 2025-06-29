@@ -1,12 +1,13 @@
 import React from 'react';
-import { PartWithInventory } from '../types';
+import { PartWithInventory, Category } from '../types';
 import { X, ExternalLink } from 'lucide-react';
+import { getCategoryName } from '../utils/categoryUtils';
 
 interface PartDetailModalProps {
   part: PartWithInventory | null;
   isOpen: boolean;
   onClose: () => void;
-  categories: Array<{ id: number; name: string }>;
+  categories: Category[];
 }
 
 export const PartDetailModal: React.FC<PartDetailModalProps> = ({
@@ -18,14 +19,10 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   if (!isOpen || !part) return null;
 
   // カテゴリIDからカテゴリ名を取得
-  const getCategoryName = (categoryId: number | undefined) => {
-    if (!categoryId) return 'Unknown';
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Unknown';
-  };
+  const categoryDisplayName = getCategoryName(categories, part.category_id);
 
   const categoryDisplay = part.category_id 
-    ? `${getCategoryName(part.category_id)}(${part.category_id})`
+    ? `${categoryDisplayName}(${part.category_id})`
     : 'Not specified';
 
   const basicFields = [

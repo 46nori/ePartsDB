@@ -276,6 +276,8 @@ function App() {
           <PartsTable
             parts={parts}
             environment={environment}
+            categories={categories}
+            showCategoryColumn={activeTab === 'keyword'}
             onQuantityChange={handleQuantityChange}
             onPartDetail={handlePartDetail}
             onPartEdit={handlePartEdit}
