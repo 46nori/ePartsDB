@@ -14,6 +14,7 @@ interface SampleData {
 }
 
 // sql.jsをrequire形式で読み込む簡易版
+// NOTE: パフォーマンス最適化のため、sql.jsはCDNから動的読み込みを使用
 export class DatabaseManager {
   private hasChanges = false;
   private sampleData: SampleData | null = null;
@@ -150,16 +151,16 @@ export class DatabaseManager {
       let filteredParts = this.sampleData.parts;
 
       if (categoryId) {
-        filteredParts = filteredParts.filter((part: any) => part.category_id === categoryId);
+        filteredParts = filteredParts.filter((part: PartWithInventory) => part.category_id === categoryId);
       }
 
       if (keyword && keyword.trim()) {
         const searchTerm = keyword.toLowerCase();
-        filteredParts = filteredParts.filter((part: any) => 
+        filteredParts = filteredParts.filter((part: PartWithInventory) => 
           part.name.toLowerCase().includes(searchTerm) ||
-          part.part_number.toLowerCase().includes(searchTerm) ||
-          part.manufacturer.toLowerCase().includes(searchTerm) ||
-          part.description.toLowerCase().includes(searchTerm)
+          (part.part_number && part.part_number.toLowerCase().includes(searchTerm)) ||
+          (part.manufacturer && part.manufacturer.toLowerCase().includes(searchTerm)) ||
+          (part.description && part.description.toLowerCase().includes(searchTerm))
         );
       }
 

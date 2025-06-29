@@ -102,13 +102,6 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
       display_order: (index + 1) * 100 // 100, 200, 300... のように設定
     }));
 
-    // デバッグログ
-    console.log('CategoryEditModal - handleSave:', {
-      updatedCategories: updatedCategories.length,
-      deletedCategoryIds,
-      categories: updatedCategories.map(c => ({ id: c.id, name: c.name }))
-    });
-
     onSave(updatedCategories, deletedCategoryIds);
     onClose();
   };
