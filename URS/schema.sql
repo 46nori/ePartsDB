@@ -36,6 +36,7 @@ CREATE TABLE inventory (
     shop TEXT,                                  -- 購入先（秋月、aitendo、AliExpressなど）
     price_per_unit REAL,                        -- 単価
     currency TEXT DEFAULT 'JPY',                -- 通貨（必要に応じて）
-    memo TEXT,
+    memo TEXT,                                  -- 購入メモ
+    shop_url TEXT,                              -- 購入先URL
     FOREIGN KEY (part_id) REFERENCES parts(id)
 );

@@ -32,6 +32,7 @@ export const PartAddModal: React.FC<PartAddModalProps> = ({
     location: '',
     purchase_date: '',
     shop: '',
+    shop_url: '',
     price_per_unit: 0,
     currency: 'JPY',
     memo: ''
@@ -100,6 +101,7 @@ export const PartAddModal: React.FC<PartAddModalProps> = ({
     { key: 'currency', label: '通貨', type: 'select' },
     { key: 'quantity', label: '初期在庫数', type: 'number' },
     { key: 'shop', label: '購入先', type: 'text' },
+    { key: 'shop_url', label: '購入先URL', type: 'url', fullWidth: true },
     { key: 'purchase_date', label: '購入日', type: 'date' },
     { key: 'location', label: '保管場所', type: 'text' },
     { key: 'memo', label: '購入メモ', type: 'textarea' }

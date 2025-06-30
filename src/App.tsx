@@ -105,6 +105,16 @@ function App() {
       const success = dbManager.updatePart(partId, updatedPart);
       if (success) {
         refreshSearchResults(); // 検索結果を更新
+        
+        // 詳細モーダルが開いている場合、最新のデータでselectedPartを更新
+        if (selectedPart && selectedPart.id === partId) {
+          // データベースから最新のパーツデータを取得
+          const updatedSelectedPart = dbManager.getPartById(partId);
+          if (updatedSelectedPart) {
+            setSelectedPart(updatedSelectedPart);
+          }
+        }
+        
         const newHasChanges = dbManager.getHasChanges();
         setHasChanges(newHasChanges);
       } else {

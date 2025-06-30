@@ -37,6 +37,7 @@ export const PartEditModal: React.FC<PartEditModalProps> = ({
         location: part.location || '',
         purchase_date: part.purchase_date || '',
         shop: part.shop || '',
+        shop_url: part.shop_url || '',
         price_per_unit: part.price_per_unit || 0,
         currency: part.currency || 'JPY',
         memo: part.memo || ''
@@ -75,6 +76,7 @@ export const PartEditModal: React.FC<PartEditModalProps> = ({
     { key: 'price_per_unit', label: '単価', type: 'number' },
     { key: 'currency', label: '通貨', type: 'select' },
     { key: 'shop', label: '購入先', type: 'text' },
+    { key: 'shop_url', label: '購入先URL', type: 'url', fullWidth: true },
     { key: 'purchase_date', label: '購入日', type: 'date' },
     { key: 'location', label: '保管場所', type: 'text' },
     { key: 'memo', label: '購入メモ', type: 'textarea' }

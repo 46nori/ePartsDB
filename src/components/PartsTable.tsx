@@ -38,13 +38,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   };
 
   const getCategoryDisplayOrder = (categoryId?: number): number => {
-    const order = getCategoryDisplayOrderFromMap(categoryMap, categoryId);
-    // デバッグ用（開発環境でのみ）
-    if (import.meta.env.DEV) {
-      const category = categoryMap.get(categoryId || 0);
-      console.log(`Category ID: ${categoryId}, Display Order: ${order}, Category Name: ${category?.name || 'Not found'}, Category Object:`, category);
-    }
-    return order;
+    return getCategoryDisplayOrderFromMap(categoryMap, categoryId);
   };
 
   const handleSort = (field: SortField) => {
