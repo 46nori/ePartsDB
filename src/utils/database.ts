@@ -33,8 +33,10 @@ export class DatabaseManager {
       await this.loadDatabase();
       
       this.useSampleData = false;
+      console.log('SQLiteデータベース初期化完了');
     } catch (error) {
       console.error('SQLiteデータベース初期化エラー:', error);
+      console.log('サンプルデータモードにフォールバック');
       this.initializeWithSampleData();
     }
   }
@@ -73,6 +75,7 @@ export class DatabaseManager {
       });
       
       // データベースファイルを取得
+      console.log('データベースファイルを読み込み中...');
       const response = await fetch('./database/eparts.db');
       if (!response.ok) {
         throw new Error(`データベースファイルが見つかりません (status: ${response.status})`);
@@ -85,6 +88,7 @@ export class DatabaseManager {
       // データベースの内容を確認
       this.verifyDatabase(db);
       this.db = db;
+      console.log('データベース読み込み完了');
       
     } catch (error) {
       console.error('データベース読み込みエラー:', error);
@@ -98,9 +102,27 @@ export class DatabaseManager {
   private verifyDatabase(db: any): void {
     try {
       // データベースの基本的な確認のみ実行
-      db.exec("SELECT name FROM sqlite_master WHERE type='table'");
+      const stmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table'");
+      const tables = [];
+      while (stmt.step()) {
+        const row = stmt.get();
+        tables.push(row[0]);
+      }
+      stmt.free();
+      
+      console.log('データベーステーブル:', tables);
+      
+      // パーツ数を確認
+      const countStmt = db.prepare("SELECT COUNT(*) FROM parts");
+      countStmt.step();
+      const count = countStmt.get()[0];
+      countStmt.free();
+      
+      console.log('パーツ数:', count);
+      
     } catch (error) {
       console.error('データベース確認エラー:', error);
+      throw error;
     }
   }
 
