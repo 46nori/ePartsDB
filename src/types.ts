@@ -30,6 +30,7 @@ export interface Inventory {
   location?: string;
   purchase_date?: string;
   shop?: string;
+  shop_url?: string;
   price_per_unit?: number;
   currency: string;
   memo?: string;
@@ -42,6 +43,7 @@ export interface PartWithInventory extends Part {
   inventory_id?: number;
   purchase_date?: string;
   shop?: string;
+  shop_url?: string;
   price_per_unit?: number;
   currency?: string;
   memo?: string;

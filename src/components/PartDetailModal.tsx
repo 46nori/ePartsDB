@@ -1,12 +1,13 @@
 import React from 'react';
-import { PartWithInventory } from '../types';
+import { PartWithInventory, Category } from '../types';
 import { X, ExternalLink } from 'lucide-react';
+import { getCategoryName } from '../utils/categoryUtils';
 
 interface PartDetailModalProps {
   part: PartWithInventory | null;
   isOpen: boolean;
   onClose: () => void;
-  categories: Array<{ id: number; name: string }>;
+  categories: Category[];
 }
 
 export const PartDetailModal: React.FC<PartDetailModalProps> = ({
@@ -18,14 +19,10 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   if (!isOpen || !part) return null;
 
   // カテゴリIDからカテゴリ名を取得
-  const getCategoryName = (categoryId: number | undefined) => {
-    if (!categoryId) return 'Unknown';
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Unknown';
-  };
+  const categoryDisplayName = getCategoryName(categories, part.category_id);
 
   const categoryDisplay = part.category_id 
-    ? `${getCategoryName(part.category_id)}(${part.category_id})`
+    ? `${categoryDisplayName}(${part.category_id})`
     : 'Not specified';
 
   const basicFields = [
@@ -49,6 +46,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
   const purchaseFields = [
     { label: '購入先', value: part.shop },
+    { label: '購入先URL', value: part.shop_url, isUrl: true },
     { label: '単価', value: part.price_per_unit ? `${part.price_per_unit} ${part.currency || 'JPY'}` : null },
     { label: '購入日', value: part.purchase_date },
     { label: '購入メモ', value: part.memo, isLongText: true }
@@ -102,10 +100,20 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             <h3 className="text-lg font-medium text-gray-900 mb-4">購入情報</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {purchaseFields.map((field) => (
-                <div key={field.label} className={`border-b border-gray-200 pb-2 ${field.isLongText ? 'md:col-span-2' : ''}`}>
+                <div key={field.label} className={`border-b border-gray-200 pb-2 ${field.isUrl || field.isLongText ? 'md:col-span-2' : ''}`}>
                   <dt className="text-sm font-medium text-gray-500">{field.label}</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    {field.isLongText && field.value ? (
+                    {field.isUrl && field.value ? (
+                      <a
+                        href={field.value as string}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                      >
+                        <span>{field.value}</span>
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    ) : field.isLongText && field.value ? (
                       <div className="break-words whitespace-pre-wrap">{field.value}</div>
                     ) : (
                       field.value || '-'

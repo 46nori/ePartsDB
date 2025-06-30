@@ -14,6 +14,7 @@ interface SampleData {
 }
 
 // sql.jsをrequire形式で読み込む簡易版
+// NOTE: パフォーマンス最適化のため、sql.jsはCDNから動的読み込みを使用
 export class DatabaseManager {
   private hasChanges = false;
   private sampleData: SampleData | null = null;
@@ -119,7 +120,7 @@ export class DatabaseManager {
     }
 
     try {
-      const result = db.exec('SELECT * FROM categories ORDER BY display_order');
+      const result = db.exec('SELECT id, name, parent_id, display_order FROM categories ORDER BY display_order');
       if (result.length === 0) return [];
 
       const categories: Category[] = [];
@@ -130,7 +131,8 @@ export class DatabaseManager {
         categories.push({
           id: row[0],
           name: row[1],
-          display_order: row[2]
+          parent_id: row[2],
+          display_order: row[3]
         });
       }
 
@@ -150,16 +152,16 @@ export class DatabaseManager {
       let filteredParts = this.sampleData.parts;
 
       if (categoryId) {
-        filteredParts = filteredParts.filter((part: any) => part.category_id === categoryId);
+        filteredParts = filteredParts.filter((part: PartWithInventory) => part.category_id === categoryId);
       }
 
       if (keyword && keyword.trim()) {
         const searchTerm = keyword.toLowerCase();
-        filteredParts = filteredParts.filter((part: any) => 
+        filteredParts = filteredParts.filter((part: PartWithInventory) => 
           part.name.toLowerCase().includes(searchTerm) ||
-          part.part_number.toLowerCase().includes(searchTerm) ||
-          part.manufacturer.toLowerCase().includes(searchTerm) ||
-          part.description.toLowerCase().includes(searchTerm)
+          (part.part_number && part.part_number.toLowerCase().includes(searchTerm)) ||
+          (part.manufacturer && part.manufacturer.toLowerCase().includes(searchTerm)) ||
+          (part.description && part.description.toLowerCase().includes(searchTerm))
         );
       }
 
@@ -196,6 +198,7 @@ export class DatabaseManager {
           p.datasheet_url,
           i.purchase_date,
           i.shop,
+          i.shop_url,
           i.price_per_unit,
           COALESCE(i.currency, 'JPY') as currency,
           i.memo
@@ -288,9 +291,10 @@ export class DatabaseManager {
           datasheet_url: row[15],
           purchase_date: row[16],
           shop: row[17],
-          price_per_unit: row[18],
-          currency: row[19],
-          memo: row[20]
+          shop_url: row[18],
+          price_per_unit: row[19],
+          currency: row[20],
+          memo: row[21]
         });
       }
 
@@ -298,6 +302,85 @@ export class DatabaseManager {
     } catch (error) {
       console.error('パーツ取得エラー:', error);
       return [];
+    }
+  }
+
+  /**
+   * 特定のパーツIDでパーツを1つ取得する
+   */
+  getPartById(partId: number): PartWithInventory | null {
+    try {
+      if (!this.db) {
+        console.warn('データベースが初期化されていません');
+        return null;
+      }
+
+      const stmt = this.db.prepare(`
+        SELECT 
+          p.id,
+          p.name,
+          p.category_id,
+          p.manufacturer,
+          p.part_number,
+          p.package,
+          p.description,
+          p.created_at,
+          COALESCE(i.quantity, 0) as quantity,
+          COALESCE(i.location, '') as location,
+          p.voltage_rating,
+          p.current_rating,
+          p.power_rating,
+          p.tolerance,
+          p.logic_family,
+          p.datasheet_url,
+          i.purchase_date,
+          i.shop,
+          i.shop_url,
+          i.price_per_unit,
+          COALESCE(i.currency, 'JPY') as currency,
+          i.memo
+        FROM parts p
+        LEFT JOIN inventory i ON p.id = i.part_id
+        WHERE p.id = ?
+      `);
+
+      stmt.bind([partId]);
+      
+      if (stmt.step()) {
+        const row = stmt.get();
+        const part: PartWithInventory = {
+          id: row[0],
+          name: row[1],
+          category_id: row[2],
+          manufacturer: row[3],
+          part_number: row[4],
+          package: row[5],
+          description: row[6],
+          created_at: row[7],
+          quantity: row[8],
+          location: row[9],
+          voltage_rating: row[10],
+          current_rating: row[11],
+          power_rating: row[12],
+          tolerance: row[13],
+          logic_family: row[14],
+          datasheet_url: row[15],
+          purchase_date: row[16],
+          shop: row[17],
+          shop_url: row[18],
+          price_per_unit: row[19],
+          currency: row[20],
+          memo: row[21]
+        };
+        stmt.free();
+        return part;
+      }
+
+      stmt.free();
+      return null;
+    } catch (error) {
+      console.error('パーツ取得エラー:', error);
+      return null;
     }
   }
 
@@ -743,10 +826,10 @@ export class DatabaseManager {
       updateStmt.free();
 
       // 在庫情報を更新
-      const inventoryFields = ['location', 'purchase_date', 'shop', 'price_per_unit', 'currency', 'memo'];
-      const hasInventoryUpdate = inventoryFields.some(field => updatedPart[field as keyof PartWithInventory] !== undefined);
+      const hasInventoryUpdate = ['location', 'purchase_date', 'shop', 'price_per_unit', 'currency', 'memo', 'shop_url'].some(field => updatedPart[field as keyof PartWithInventory] !== undefined);
       
       if (hasInventoryUpdate) {
+        
         const updateInventoryStmt = db.prepare(`
           UPDATE inventory SET 
             location = ?,
@@ -754,7 +837,8 @@ export class DatabaseManager {
             shop = ?,
             price_per_unit = ?,
             currency = ?,
-            memo = ?
+            memo = ?,
+            shop_url = ?
           WHERE part_id = ?
         `);
         
@@ -765,6 +849,7 @@ export class DatabaseManager {
           updatedPart.price_per_unit || null,
           updatedPart.currency || 'JPY',
           updatedPart.memo || '',
+          updatedPart.shop_url || null,
           partId
         ]);
         
@@ -852,8 +937,8 @@ export class DatabaseManager {
 
       // 在庫テーブルに追加
       const insertInventoryStmt = db.prepare(`
-        INSERT INTO inventory (part_id, quantity, location, purchase_date, shop, price_per_unit, currency, memo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO inventory (part_id, quantity, location, purchase_date, shop, price_per_unit, currency, memo, shop_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       insertInventoryStmt.bind([
@@ -864,7 +949,8 @@ export class DatabaseManager {
         newPart.shop || '',
         newPart.price_per_unit || null,
         newPart.currency || 'JPY',
-        newPart.memo || ''
+        newPart.memo || '',
+        newPart.shop_url || null
       ]);
       
       insertInventoryStmt.step();

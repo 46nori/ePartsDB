@@ -1,10 +1,12 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_APP_TITLE: string
-  // その他のenv変数をここに追加
+  readonly DEV: boolean;
+  readonly PROD: boolean;
+  // プロジェクト固有の環境変数をここに追加
+  // readonly VITE_API_URL: string;
 }
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv
+  readonly env: ImportMetaEnv;
 }
