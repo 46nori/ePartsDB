@@ -66,12 +66,6 @@ function App() {
     setActiveTab('category');
   };
 
-  const handleResetSearch = () => {
-    setParts([]);
-    setSelectedCategoryId(null);
-    setKeyword('');
-  };
-
   const refreshSearchResults = () => {
     // 現在の検索条件に基づいて結果を再取得
     if (selectedCategoryId) {
@@ -185,6 +179,7 @@ function App() {
     setActiveTab(tab);
     setKeyword('');
     setSelectedCategoryId(null);
+    setParts([]); // タブ切り替え時は検索結果をクリア
   };
 
   const handleCategoryEdit = () => {
@@ -267,7 +262,6 @@ function App() {
           categories={categories}
           onCategorySelect={handleCategorySelect}
           hasSearchResults={parts.length > 0}
-          onResetSearch={handleResetSearch}
         />
 
         {/* Results Info */}
@@ -276,7 +270,9 @@ function App() {
             <p className="text-sm text-gray-600">
               {selectedCategoryId
                 ? `カテゴリ: ${categories.find(c => c.id === selectedCategoryId)?.name || 'Unknown'}`
-                : `キーワード: "${keyword}"`} の検索結果: {parts.length}件
+                : keyword
+                  ? `キーワード: "${keyword}"`
+                  : '検索結果'} の検索結果: {parts.length}件
             </p>
           </div>
         )}

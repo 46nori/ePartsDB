@@ -11,7 +11,6 @@ interface SearchSectionProps {
   categories: Array<{ id: number; name: string }>;
   onCategorySelect: (categoryId: number) => void;
   hasSearchResults?: boolean; // 検索結果があるかどうか
-  onResetSearch?: () => void; // 検索状態をリセットする関数
 }
 
 export const SearchSection: React.FC<SearchSectionProps> = ({
@@ -22,8 +21,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   onSearch,
   categories,
   onCategorySelect,
-  hasSearchResults = false,
-  onResetSearch
+  hasSearchResults = false
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -52,34 +50,21 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         </button>
       </div>
 
-      {activeTab === 'category' && (
-        <div>
-          {hasSearchResults && activeTab === 'category' ? (
-            <div className="text-center">
+      {activeTab === 'category' && !hasSearchResults && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {categories.length > 0 ? (
+            categories.map((category) => (
               <button
-                onClick={() => onResetSearch?.()}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                key={category.id}
+                className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                onClick={() => onCategorySelect(category.id)}
               >
-                カテゴリ選択に戻る
+                {category.name}
               </button>
-            </div>
+            ))
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {categories.length > 0 ? (
-                categories.map((category) => (
-                  <button
-                    key={category.id}
-                    className="p-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
-                    onClick={() => onCategorySelect(category.id)}
-                  >
-                    {category.name}
-                  </button>
-                ))
-              ) : (
-                <div className="col-span-full text-center text-gray-500 py-8">
-                  カテゴリが見つかりません。
-                </div>
-              )}
+            <div className="col-span-full text-center text-gray-500 py-8">
+              カテゴリが見つかりません。
             </div>
           )}
         </div>
