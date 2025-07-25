@@ -149,7 +149,7 @@ export const PartEditModal: React.FC<PartEditModalProps> = ({
                       type="number"
                       min="0"
                       step={field.key === 'price_per_unit' ? '0.01' : '1'}
-                      value={formData[field.key as keyof PartWithInventory] || ''}
+                      value={formData[field.key as keyof PartWithInventory] ?? ''}
                       onChange={(e) => handleInputChange(field.key, 
                         field.key === 'price_per_unit' 
                           ? parseFloat(e.target.value) || 0
