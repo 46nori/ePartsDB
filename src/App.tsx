@@ -70,7 +70,8 @@ function App() {
     // 現在の検索条件に基づいて結果を再取得
     if (selectedCategoryId) {
       setParts(dbManager.getPartsWithInventory(selectedCategoryId));
-    } else if (keyword && activeTab === 'keyword') {
+    } else if (activeTab === 'keyword') {
+      // キーワード検索タブの場合（キーワード未指定の全検索も含む）
       setParts(dbManager.getPartsWithInventory(undefined, keyword));
     }
     // どちらでもない場合は結果をクリアしない（現在の状態を維持）
