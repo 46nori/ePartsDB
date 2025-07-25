@@ -174,7 +174,7 @@ export const PartAddModal: React.FC<PartAddModalProps> = ({
                       type="number"
                       min="0"
                       step={field.key === 'price_per_unit' ? '0.01' : '1'}
-                      value={formData[field.key as keyof typeof formData] || ''}
+                      value={formData[field.key as keyof typeof formData] ?? ''}
                       onChange={(e) => handleInputChange(field.key, 
                         field.key === 'price_per_unit' 
                           ? parseFloat(e.target.value) || 0
