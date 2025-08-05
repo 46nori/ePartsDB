@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { PartWithInventory, Category } from '../types';
 import { X, ExternalLink } from 'lucide-react';
 import { getCategoryName } from '../utils/categoryUtils';
@@ -16,6 +16,39 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   onClose,
   categories
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // キーボードイベントハンドラー
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      } else if (event.key === 'Enter') {
+        // フォーカス可能な要素がない場合、Enterキーでも閉じる
+        const focusableElements = modalRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusableElements || focusableElements.length === 0 || 
+            !Array.from(focusableElements).some(el => el === document.activeElement)) {
+          onClose();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // モーダル要素にフォーカスを設定
+    if (modalRef.current) {
+      modalRef.current.focus();
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !part) return null;
 
   // カテゴリIDからカテゴリ名を取得
@@ -54,7 +87,11 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div 
+        ref={modalRef}
+        tabIndex={-1}
+        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto outline-none"
+      >
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">パーツ詳細情報</h2>
           <button
