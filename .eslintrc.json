@@ -7,7 +7,7 @@
   "extends": [
     "eslint:recommended"
   ],
-  "ignorePatterns": ["dist"],
+  "ignorePatterns": ["dist", "tests"],
   "rules": {
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
     "prefer-const": "error",
