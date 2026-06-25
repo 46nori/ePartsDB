@@ -9,24 +9,25 @@ function sha256(data: Buffer): string {
 }
 
 function readGhPagesDb(): Buffer {
-  return execSync('git show gh-pages:public/database/eparts.db', {
-    encoding: 'buffer',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
+  const refs = ['origin/gh-pages', 'gh-pages']
+  for (const ref of refs) {
+    try {
+      return execSync(`git show ${ref}:public/database/eparts.db`, {
+        encoding: 'buffer',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+    } catch {
+      // try next ref
+    }
+  }
+  throw new Error(
+    'gh-pages branch is not available. Run: git fetch origin gh-pages'
+  )
 }
 
 describe('gh-pages eparts.db sync', () => {
   it('public/database/eparts.db matches gh-pages branch', () => {
-    let ghPagesDb: Buffer
-    try {
-      ghPagesDb = readGhPagesDb()
-    } catch (error) {
-      throw new Error(
-        'gh-pages branch is not available. Run: git fetch origin gh-pages:gh-pages',
-        { cause: error }
-      )
-    }
-
+    const ghPagesDb = readGhPagesDb()
     const localDb = readFileSync(EPARTS_DB_PATH)
 
     expect(sha256(localDb)).toBe(sha256(ghPagesDb))
