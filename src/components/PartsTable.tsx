@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { PartWithInventory, Environment, Category } from '../types';
 import { ExternalLink, Info, Edit, Trash2, ArrowUpDown } from 'lucide-react';
 import { createCategoryMap, getCategoryNameFromMap, getCategoryDisplayOrderFromMap } from '../utils/categoryUtils';
+import { devLog } from '../utils/devLog';
 
 interface PartsTableProps {
   parts: PartWithInventory[];
@@ -60,10 +61,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
     } else if (sortField === 'category') {
       const aValue = getCategoryDisplayOrder(a.category_id);
       const bValue = getCategoryDisplayOrder(b.category_id);
-      // デバッグ用（開発環境でのみ）
-      if (import.meta.env.DEV) {
-        console.log(`Sorting categories: Part A (${a.name}) order: ${aValue}, Part B (${b.name}) order: ${bValue}, Direction: ${sortDirection}`);
-      }
+      devLog(`Sorting categories: Part A (${a.name}) order: ${aValue}, Part B (${b.name}) order: ${bValue}, Direction: ${sortDirection}`);
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;

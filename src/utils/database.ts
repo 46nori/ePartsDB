@@ -1,12 +1,6 @@
 import { Category, PartWithInventory } from '../types';
 import { getSqlJs } from './sqljs';
-
-// 開発環境でのみログ出力する関数
-const devLog = (message: string, ...args: any[]) => {
-  if (import.meta.env.DEV) {
-    console.log(message, ...args);
-  }
-};
+import { devLog } from './devLog';
 
 // サンプルデータの型定義
 interface SampleData {
@@ -28,10 +22,10 @@ export class DatabaseManager {
       await this.loadDatabase();
       
       this.useSampleData = false;
-      console.log('SQLiteデータベース初期化完了');
+      devLog('SQLiteデータベース初期化完了');
     } catch (error) {
       console.error('SQLiteデータベース初期化エラー:', error);
-      console.log('サンプルデータモードにフォールバック');
+      console.warn('サンプルデータモードにフォールバック');
       this.initializeWithSampleData();
     }
   }
@@ -44,7 +38,7 @@ export class DatabaseManager {
       const SQL = await getSqlJs();
 
       // データベースファイルを取得
-      console.log('データベースファイルを読み込み中...');
+      devLog('データベースファイルを読み込み中...');
       const response = await fetch('./database/eparts.db');
       if (!response.ok) {
         throw new Error(`データベースファイルが見つかりません (status: ${response.status})`);
@@ -57,7 +51,7 @@ export class DatabaseManager {
       // データベースの内容を確認
       this.verifyDatabase(db);
       this.db = db;
-      console.log('データベース読み込み完了');
+      devLog('データベース読み込み完了');
       
     } catch (error) {
       console.error('データベース読み込みエラー:', error);
@@ -79,7 +73,7 @@ export class DatabaseManager {
       }
       stmt.free();
       
-      console.log('データベーステーブル:', tables);
+      devLog('データベーステーブル:', tables);
       
       // パーツ数を確認
       const countStmt = db.prepare("SELECT COUNT(*) FROM parts");
@@ -87,7 +81,7 @@ export class DatabaseManager {
       const count = countStmt.get()[0];
       countStmt.free();
       
-      console.log('パーツ数:', count);
+      devLog('パーツ数:', count);
       
     } catch (error) {
       console.error('データベース確認エラー:', error);
