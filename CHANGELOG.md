@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-25
+
 ### 追加
 
 - VitestによるDB互換性テスト（読み込み・スキーマ・ラウンドトリップ・gh-pages同期）
@@ -20,6 +22,10 @@
 - CIのNode.jsを22に更新
 - lucide-react 1.x、Vite 6.4、postcss/autoprefixer等の依存関係更新
 - 詳細ログを`devLog`に統一（本番フォールバックは`console.warn`を維持）
+
+### ドキュメント
+
+- README、BRANCH_STRATEGY、CHANGELOG等を現状の実装に合わせて更新
 
 ## [2.1.0] - 2025-08-06
 
