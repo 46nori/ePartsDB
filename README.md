@@ -6,16 +6,16 @@
 このプログラムおよびドキュメントは、GitHub CopilotのAgentモードで生成しました。使用したモデルはClaude Sonnet 4です。
 コード生成の元になった要求仕様は[こちら](URS/Requirement.md)。
 
-## � システム概要
+## システム概要
 
-### ✨ 主な特徴
+### 主な特徴
 
 - **2つの運用モード**: リモート閲覧用とローカル編集用
 - **ブラウザ内SQLite**: sql.jsによるクライアントサイドデータベース
 - **レスポンシブUI**: PC・タブレット・スマートフォン対応
 - **静的ホスティング**: GitHub Pages等での簡単デプロイ
 
-### 🚀 基本機能
+### 基本機能
 
 - **パーツ検索**: カテゴリ別検索・キーワード検索
 - **在庫管理**: 在庫数の表示・編集（ローカルモード）
@@ -24,32 +24,34 @@
 - **データ同期**: 編集内容のダウンロード・バックアップ
 - **キーボードサポート**: ESC/Enterキーでモーダル操作対応
 
-### 🛠 技術スタック
+### 技術スタック
 
-- **フロントエンド**: React 18 + TypeScript + Vite
-- **データベース**: SQLite + sql.js (ブラウザ内実行)
-- **スタイリング**: Tailwind CSS
-- **アイコン**: Lucide React
-- **ホスティング**: GitHub Pages (静的)
+- **フロントエンド**: React 18 + TypeScript + Vite 6
+- **データベース**: SQLite + sql.js 1.14（npmパッケージからWASMをバンドル）
+- **スタイリング**: Tailwind CSS 3
+- **アイコン**: Lucide React 1.x
+- **テスト**: Vitest（DB互換性テスト）
+- **Lint**: ESLint 9（flat config）
+- **ホスティング**: GitHub Pages（静的）
 
-### 📊 プロジェクト統計
+### プロジェクト統計
 
-- **総コード行数**: 2,921行（TypeScript/React）
-- **プロジェクト全体**: 8,631行（設定・ドキュメント含む）
+- **総コード行数**: 約3,000行（TypeScript/React）
 - **コンポーネント数**: 7個（React TSX）
+- **自動テスト**: 9件（DB読み込み・スキーマ・ラウンドトリップ等）
 - **対応ブラウザ**: Chrome, Safari, Firefox, Edge
 
-## 📋 使い方
+## 使い方
 
-> **重要**: このシステムを利用するには、まず「👤 個人運用」セクションの初期セットアップが必要です。
+> **重要**: このシステムを利用するには、まず「個人運用」セクションの初期セットアップが必要です。
 
-### 🔄 利用開始までの流れ
+### 利用開始までの流れ
 
-1. **初期セットアップ**（必須）: 「👤 個人運用」セクションの手順を実行
+1. **初期セットアップ**（必須）: 「個人運用」セクションの手順を実行
 2. **リモートモード**: GitHub Pagesで閲覧・検索
 3. **ローカルモード**: データの編集・追加・削除
 
-### 🌐 リモートモード（データ閲覧用）
+### リモートモード（データ閲覧用）
 
 初期セットアップ完了後、GitHub Pagesで公開されるアプリで**データの閲覧のみ可能**です。
 
@@ -64,7 +66,7 @@
 - 最新のデータベース内容を反映
 - スマートフォンからの外出先での在庫確認に最適
 
-### 💻 ローカルモード（データ管理用）
+### ローカルモード（データ管理用）
 
 初期セットアップ完了後、ローカルサーバーで動作するモードで**データの編集が可能**です。
 
@@ -77,7 +79,7 @@ npm run dev
 
 **アクセス:**
 
-- ブラウザで [http://localhost:5173](http://localhost:5173) を開く
+- ブラウザで [http://localhost:5173/ePartsDB/](http://localhost:5173/ePartsDB/) を開く
 
 **特徴:**
 
@@ -86,7 +88,7 @@ npm run dev
 - データベースファイルのダウンロード機能
 - 在庫管理・パーツ追加などの日常的なメンテナンス作業に使用
 
-### 📱 基本操作
+### 基本操作
 
 #### パーツ検索（リモート・ローカル共通）
 
@@ -102,9 +104,9 @@ npm run dev
 - **パーツ削除**: パーツ行の削除ボタン→確認ダイアログで実行
 - **カテゴリ管理**: 「カテゴリ編集」ボタン→名前編集・順序変更・追加・削除→保存
 
-## 👤 個人運用
+## 個人運用
 
-### 🔄 初期セットアップ
+### 初期セットアップ
 
 1. **リポジトリをフォーク**
 
@@ -120,10 +122,10 @@ npm run dev
    ```bash
    # gh-pagesブランチを作成（個人運用用）
    git checkout -b gh-pages
-   
+
    # 任意: 個人のデータベースに差し替え
    cp /path/to/your/eparts.db public/database/eparts.db
-   
+
    git add .
    git commit -m "個人運用環境の初期セットアップ"
    git push -u origin gh-pages
@@ -133,7 +135,7 @@ npm run dev
    - リポジトリの「Settings」→「Pages」
    - **Source**: 「GitHub Actions」を選択
 
-### 📊 日常的なデータ更新
+### 日常的なデータ更新
 
 ```bash
 git checkout gh-pages
@@ -144,7 +146,7 @@ git commit -m "在庫データ更新"
 git push origin gh-pages  # 自動デプロイ
 ```
 
-### 🔄 最新機能の取り込み
+### 最新機能の取り込み
 
 ```bash
 git checkout gh-pages
@@ -152,7 +154,7 @@ git merge main  # 最新機能を取り込み（DBは自動保護）
 git push origin gh-pages  # 自動デプロイ
 ```
 
-### 📁 データ更新フロー
+### データ更新フロー
 
 1. ローカルモードでデータを編集
 2. 「同期（ダウンロード）」ボタンで更新されたeparts.dbをダウンロード
@@ -160,15 +162,17 @@ git push origin gh-pages  # 自動デプロイ
 4. Gitでコミット・プッシュ
 5. 次回のGitHub Pagesデプロイ時にリモートモードへ反映
 
-## � 開発・リリース方法
+## 開発・リリース方法
 
-### 🏗 ブランチ構成（トリプルブランチ運用）
+### ブランチ構成（トリプルブランチ運用）
 
 - **`develop`ブランチ**: 機能開発・バグ修正用
 - **`main`ブランチ**: リリース版・安定版管理
 - **`gh-pages`ブランチ**: 個人運用・実デプロイ用
 
-### �‍💻 開発環境セットアップ
+詳細は [BRANCH_STRATEGY.md](BRANCH_STRATEGY.md) を参照。
+
+### 開発環境セットアップ
 
 ```bash
 # リポジトリのクローン
@@ -179,16 +183,24 @@ npm install
 # developブランチに切り替えて開発開始
 git checkout develop
 git pull origin develop
+
+# gh-pagesの最新DBを取り込む（developで作業する場合）
+npm run sync:db
+
 npm run dev  # 開発サーバー起動
 ```
 
-### 🔄 開発フロー
+### 開発フロー
 
 ```bash
 # 1. 機能開発
 git checkout develop
 git pull origin develop
+npm run sync:db  # 必要に応じてgh-pagesのDBを同期
 # ... 開発作業 ...
+npm run lint
+npm test
+npm run build
 git add .
 git commit -m "機能追加: XXX"
 git push origin develop
@@ -200,7 +212,19 @@ git merge develop
 git push origin main
 ```
 
-### 🚀 mainブランチでのリリース手順
+### 開発者向けコマンド
+
+| コマンド | 説明 |
+|---------|------|
+| `npm run dev` | 開発サーバー起動 |
+| `npm run build` | 本番ビルド |
+| `npm run preview` | ビルド結果のプレビュー |
+| `npm test` | VitestでDB互換性テストを実行 |
+| `npm run test:watch` | テストをウォッチモードで実行 |
+| `npm run lint` | ESLintを実行 |
+| `npm run sync:db` | `gh-pages`ブランチから`eparts.db`を同期 |
+
+### mainブランチでのリリース手順
 
 メンテナー向けの詳細なリリース手順：
 
@@ -208,7 +232,9 @@ git push origin main
 # 1. developブランチの準備確認
 git checkout develop
 git pull origin develop
-npm run build  # ビルドエラーがないか確認
+npm run lint
+npm test
+npm run build
 npm run preview  # 動作確認
 
 # 2. mainブランチへマージ
@@ -239,58 +265,76 @@ git push --tags  # タグもプッシュ
 # - 説明: CHANGELOG.mdの該当バージョンの内容をコピー
 ```
 
-### ✅ リリース後の確認事項
+### リリース後の確認事項
 
 - [ ] GitHub Actionsが正常に完了している
-- [ ] リリースページが正しく作成されている  
+- [ ] リリースページが正しく作成されている
 - [ ] タグが正しく作成されている
 - [ ] CHANGELOGが最新版を反映している
 
-### 🔨 ビルドコマンド
+### CI（GitHub Actions）
 
-```bash
-npm run build    # 本番ビルド
-npm run preview  # ビルド結果をプレビュー
-```
+`main` / `develop` / `gh-pages` のプッシュ時に以下を実行する（デプロイは`gh-pages`のみ）:
 
-## 🗄 データベース
+1. `npm ci`
+2. `npm run lint`
+3. `git fetch origin gh-pages:gh-pages`（DB同期テスト用）
+4. `npm test`
+5. `npm run build`
+
+実行環境は Node.js 22。
+
+## データベース
 
 - **ファイル**: `public/database/eparts.db`（1箇所で管理）
 - **スキーマ**: categories, parts, inventory
 - **詳細**: `URS/schema.sql` を参照
+- **sql.js**: npmパッケージ（`~1.14.1`）からWASMをバンドル。CDNは使用しない
+- **テスト**: `tests/database/` で読み込み・スキーマ・ラウンドトリップ・gh-pages同期を検証
 
-## 🚧 開発状況
+### developブランチでのDB運用
 
-### ✅ 実装済み機能
+`gh-pages`ブランチの`eparts.db`が本番最新データとなる。developで作業する際は以下で同期する:
 
-- ✅ パーツ検索（カテゴリ・キーワード）
-- ✅ パーツ詳細表示
-- ✅ 在庫数編集
-- ✅ パーツ情報編集
-- ✅ パーツ新規追加
-- ✅ パーツ削除
-- ✅ カテゴリ編集（名前・表示順序変更）
-- ✅ カテゴリ新規追加
-- ✅ カテゴリ削除
-- ✅ データベース同期（ダウンロード）
-- ✅ 環境自動判別
-- ✅ レスポンシブUI
-- ✅ ブラウザ別ダウンロード対応
+```bash
+npm run sync:db
+```
 
-### 🎯 品質指標
+## 開発状況
 
-- ✅ TypeScript型安全性
-- ✅ エラーハンドリング
-- ✅ ユーザビリティ
-- ✅ パフォーマンス最適化
-- ✅ セキュリティ対策
+### 実装済み機能
 
-## 🚨 トラブルシューティング
+- パーツ検索（カテゴリ・キーワード）
+- パーツ詳細表示
+- 在庫数編集
+- パーツ情報編集
+- パーツ新規追加
+- パーツ削除
+- カテゴリ編集（名前・表示順序変更）
+- カテゴリ新規追加
+- カテゴリ削除
+- データベース同期（ダウンロード）
+- 環境自動判別
+- レスポンシブUI
+- ブラウザ別ダウンロード対応
+- DB互換性の自動テスト（Vitest）
 
-- **データベース読み込めない**: `public/database/eparts.db`の存在確認、ブラウザコンソールでエラーチェック
-- **GitHub Actionsデプロイ失敗**: Actions タブでエラーログ確認、ローカルビルド成功確認
+### 品質指標
 
-## 📄 ライセンス
+- TypeScript型安全性
+- ESLintによる静的解析
+- DB互換性テスト（9件）
+- エラーハンドリング
+- ユーザビリティ
+- パフォーマンス最適化
+
+## トラブルシューティング
+
+- **データベース読み込めない**: `public/database/eparts.db`の存在確認。本番ビルドではブラウザコンソールに`console.warn`でフォールバック通知が出る。開発時は`devLog`で詳細ログを確認
+- **developのDBが古い**: `npm run sync:db`でgh-pagesから同期後、`npm test`で確認
+- **GitHub Actions失敗**: Actionsタブでエラーログ確認。ローカルで`npm run lint && npm test && npm run build`を実行
+
+## ライセンス
 
 このプロジェクトは MIT License の下でライセンスされています。
 

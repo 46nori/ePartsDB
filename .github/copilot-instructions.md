@@ -6,10 +6,12 @@
 ePartsDBは、電子パーツの在庫を管理するためのWebアプリケーションです。
 
 ### 技術スタック
-- **フロントエンド**: React + TypeScript + Vite
-- **データベース**: SQLite + sql.js (ブラウザ内実行)
-- **スタイリング**: Tailwind CSS
-- **アイコン**: Lucide React
+- **フロントエンド**: React 18 + TypeScript + Vite 6
+- **データベース**: SQLite + sql.js 1.14（npmパッケージからWASMをバンドル、`src/utils/sqljs.ts`）
+- **スタイリング**: Tailwind CSS 3
+- **アイコン**: Lucide React 1.x
+- **テスト**: Vitest（`tests/database/`）
+- **Lint**: ESLint 9（`eslint.config.js`、flat config）
 
 ### 主な機能
 - パーツのカテゴリ検索・キーワード検索
@@ -20,7 +22,7 @@ ePartsDBは、電子パーツの在庫を管理するためのWebアプリケー
 
 ### アーキテクチャの特徴
 - Single Page Application (SPA)
-- 静的ホスティング対応（GitHub Pages想定）
+- 静的ホスティング対応（GitHub Pages想定、base: `/ePartsDB/`）
 - ブラウザ内SQLiteデータベース
 - 環境によるUI切り替え（読み取り専用/編集可能）
 
@@ -29,10 +31,23 @@ ePartsDBは、電子パーツの在庫を管理するためのWebアプリケー
 - 関数コンポーネント + Hooksを使用
 - Tailwind CSSによるユーティリティファーストなスタイリング
 - レスポンシブデザインの実装
+- 開発専用ログは `src/utils/devLog.ts` の `devLog` を使用
+- 本番でも確認すべき異常系は `console.warn` / `console.error` を使用
 
 ### データベース設計
 - categories: パーツカテゴリ
 - parts: 電子パーツ基本情報
 - inventory: 在庫情報
 
-データベースファイル（eparts.db）はGitHubで管理され、ブラウザで直接読み込まれます。
+データベースファイル（`public/database/eparts.db`）はGitHubで管理され、ブラウザで直接読み込まれる。
+`gh-pages`ブランチのDBが本番最新。developでは `npm run sync:db` で同期する。
+
+### 開発コマンド
+- `npm run dev` - 開発サーバー
+- `npm test` - DB互換性テスト
+- `npm run lint` - ESLint
+- `npm run sync:db` - gh-pagesからeparts.dbを同期
+- `npm run build` - 本番ビルド
+
+### CI
+プッシュ時に lint・test・build を実行（Node.js 22）。デプロイは `gh-pages` のみ。
