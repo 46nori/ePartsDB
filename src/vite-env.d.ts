@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module 'sql.js/dist/sql-wasm-browser.wasm?url' {
+  const url: string
+  export default url
+}
+
 interface ImportMetaEnv {
   readonly DEV: boolean;
   readonly PROD: boolean;

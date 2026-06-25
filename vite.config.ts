@@ -10,9 +10,7 @@ export default defineConfig({
     })
   ],
   base: '/ePartsDB/',
-  optimizeDeps: {
-    exclude: ['sql.js']
-  },
+  assetsInclude: ['**/*.wasm'],
   server: {
     fs: {
       allow: ['..']

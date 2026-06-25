@@ -1,4 +1,5 @@
 import { Category, PartWithInventory } from '../types';
+import { getSqlJs } from './sqljs';
 
 // 開発環境でのみログ出力する関数
 const devLog = (message: string, ...args: any[]) => {
@@ -13,8 +14,6 @@ interface SampleData {
   parts: PartWithInventory[];
 }
 
-// sql.jsをrequire形式で読み込む簡易版
-// NOTE: パフォーマンス最適化のため、sql.jsはCDNから動的読み込みを使用
 export class DatabaseManager {
   private hasChanges = false;
   private sampleData: SampleData | null = null;
@@ -26,10 +25,6 @@ export class DatabaseManager {
    */
   async initialize(): Promise<void> {
     try {
-      // 1. script要素でsql.jsを動的読み込み
-      await this.loadSqlJs();
-      
-      // 2. データベースファイル読み込み
       await this.loadDatabase();
       
       this.useSampleData = false;
@@ -42,38 +37,12 @@ export class DatabaseManager {
   }
 
   /**
-   * sql.jsをスクリプトタグで読み込む
-   */
-  private loadSqlJs(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // 既に読み込まれている場合
-      if ((window as any).initSqlJs) {
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://sql.js.org/dist/sql-wasm.js';
-      script.onload = () => {
-        resolve();
-      };
-      script.onerror = () => {
-        reject(new Error('sql.jsの読み込みに失敗しました'));
-      };
-      document.head.appendChild(script);
-    });
-  }
-
-  /**
    * SQLiteデータベースファイルを読み込む
    */
   private async loadDatabase(): Promise<void> {
     try {
-      // sql.jsを初期化
-      const SQL = await (window as any).initSqlJs({
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`
-      });
-      
+      const SQL = await getSqlJs();
+
       // データベースファイルを取得
       console.log('データベースファイルを読み込み中...');
       const response = await fetch('./database/eparts.db');
