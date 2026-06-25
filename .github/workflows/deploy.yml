@@ -39,7 +39,7 @@ jobs:
         run: npm run lint
 
       - name: Fetch gh-pages for DB sync test
-        run: git fetch origin gh-pages:gh-pages
+        run: git fetch origin gh-pages
 
       - name: Run tests
         run: npm test
