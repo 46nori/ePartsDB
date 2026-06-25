@@ -20,11 +20,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
       
       - name: Setup Pages
@@ -32,6 +34,15 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Fetch gh-pages for DB sync test
+        run: git fetch origin gh-pages:gh-pages
+
+      - name: Run tests
+        run: npm test
       
       - name: Build application
         run: npm run build

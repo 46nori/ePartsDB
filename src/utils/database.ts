@@ -1,11 +1,6 @@
 import { Category, PartWithInventory } from '../types';
-
-// 開発環境でのみログ出力する関数
-const devLog = (message: string, ...args: any[]) => {
-  if (import.meta.env.DEV) {
-    console.log(message, ...args);
-  }
-};
+import { getSqlJs } from './sqljs';
+import { devLog } from './devLog';
 
 // サンプルデータの型定義
 interface SampleData {
@@ -13,8 +8,6 @@ interface SampleData {
   parts: PartWithInventory[];
 }
 
-// sql.jsをrequire形式で読み込む簡易版
-// NOTE: パフォーマンス最適化のため、sql.jsはCDNから動的読み込みを使用
 export class DatabaseManager {
   private hasChanges = false;
   private sampleData: SampleData | null = null;
@@ -26,42 +19,15 @@ export class DatabaseManager {
    */
   async initialize(): Promise<void> {
     try {
-      // 1. script要素でsql.jsを動的読み込み
-      await this.loadSqlJs();
-      
-      // 2. データベースファイル読み込み
       await this.loadDatabase();
       
       this.useSampleData = false;
-      console.log('SQLiteデータベース初期化完了');
+      devLog('SQLiteデータベース初期化完了');
     } catch (error) {
       console.error('SQLiteデータベース初期化エラー:', error);
-      console.log('サンプルデータモードにフォールバック');
+      console.warn('サンプルデータモードにフォールバック');
       this.initializeWithSampleData();
     }
-  }
-
-  /**
-   * sql.jsをスクリプトタグで読み込む
-   */
-  private loadSqlJs(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // 既に読み込まれている場合
-      if ((window as any).initSqlJs) {
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://sql.js.org/dist/sql-wasm.js';
-      script.onload = () => {
-        resolve();
-      };
-      script.onerror = () => {
-        reject(new Error('sql.jsの読み込みに失敗しました'));
-      };
-      document.head.appendChild(script);
-    });
   }
 
   /**
@@ -69,13 +35,10 @@ export class DatabaseManager {
    */
   private async loadDatabase(): Promise<void> {
     try {
-      // sql.jsを初期化
-      const SQL = await (window as any).initSqlJs({
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`
-      });
-      
+      const SQL = await getSqlJs();
+
       // データベースファイルを取得
-      console.log('データベースファイルを読み込み中...');
+      devLog('データベースファイルを読み込み中...');
       const response = await fetch('./database/eparts.db');
       if (!response.ok) {
         throw new Error(`データベースファイルが見つかりません (status: ${response.status})`);
@@ -88,7 +51,7 @@ export class DatabaseManager {
       // データベースの内容を確認
       this.verifyDatabase(db);
       this.db = db;
-      console.log('データベース読み込み完了');
+      devLog('データベース読み込み完了');
       
     } catch (error) {
       console.error('データベース読み込みエラー:', error);
@@ -110,7 +73,7 @@ export class DatabaseManager {
       }
       stmt.free();
       
-      console.log('データベーステーブル:', tables);
+      devLog('データベーステーブル:', tables);
       
       // パーツ数を確認
       const countStmt = db.prepare("SELECT COUNT(*) FROM parts");
@@ -118,7 +81,7 @@ export class DatabaseManager {
       const count = countStmt.get()[0];
       countStmt.free();
       
-      console.log('パーツ数:', count);
+      devLog('パーツ数:', count);
       
     } catch (error) {
       console.error('データベース確認エラー:', error);

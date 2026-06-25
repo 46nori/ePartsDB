@@ -1,33 +1,39 @@
 {
   "name": "epartsdb",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "sync:db": "bash scripts/sync-eparts-db.sh",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "lucide-react": "^0.263.1",
+    "lucide-react": "^1.21.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "sql.js": "^1.13.0"
+    "sql.js": "~1.14.1"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
+    "@eslint/js": "^9.39.3",
+    "@types/react": "^18.3.31",
     "@types/react-dom": "^18.2.7",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^4.0.3",
-    "autoprefixer": "^10.4.14",
-    "eslint": "^8.45.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
-    "postcss": "^8.4.27",
+    "autoprefixer": "^10.5.2",
+    "eslint": "^9.39.3",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.15",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.0.2",
-    "vite": "^6.3.5"
+    "typescript-eslint": "^8.56.1",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.9"
   }
 }
